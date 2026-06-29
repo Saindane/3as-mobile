@@ -42,6 +42,7 @@ dependencies:
   equatable: ^2.0.5
   dartz: ^0.10.1           # Functional: Either<Failure, T>
   connectivity_plus: ^6.0.3
+  url_strategy: ^0.2.0     # Web: removes # from URLs (path-based routing)
 
 dev_dependencies:
   flutter_test:

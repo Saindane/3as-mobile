@@ -62,3 +62,36 @@ flutter build apk --release
 
 ## Environment
 Set your API base URL in `lib/core/constants/app_constants.dart`
+
+## Web Support
+
+The app runs on **Flutter Web** as a Progressive Web App (PWA).
+
+### Run on web
+```bash
+flutter run -d chrome
+# or for release build:
+flutter build web --release
+```
+
+### Web features
+- Responsive layout: sidebar on desktop (≥900px), bottom nav on mobile
+- PWA manifest: installable from browser
+- Path-based routing (no `#` in URLs via `url_strategy`)
+- Custom loading splash screen
+- Mouse + trackpad + touch scroll support
+- Role switcher in desktop topbar (for demo/testing)
+- Desktop sidebar: brand, user chip, full nav, sign out
+
+### Breakpoints
+| Screen | Width | Layout |
+|---|---|---|
+| Mobile | < 600px | Bottom nav, stacked cards |
+| Tablet | 600–900px | Bottom nav, wider content |
+| Desktop / Web | ≥ 900px | Sidebar + topbar + full content |
+
+### Deploy to web
+```bash
+flutter build web --release
+# Output: build/web/ — deploy to Firebase Hosting, Netlify, or Nginx
+```

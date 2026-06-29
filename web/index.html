@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base href="$FLUTTER_BASE_HREF">
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="3As Complex Maintenance Management System">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="3As Complex">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- PWA manifest -->
+  <link rel="manifest" href="manifest.json">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="favicon.png"/>
+
+  <title>3As Complex — Maintenance Management</title>
+
+  <style>
+    body {
+      margin: 0;
+      background-color: #F8FAFC;
+      font-family: 'Inter', sans-serif;
+    }
+    /* Loading splash */
+    #splash {
+      position: fixed; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      background: #F8FAFC; z-index: 9999;
+    }
+    #splash-logo {
+      width: 64px; height: 64px;
+      background: #2563EB; border-radius: 16px;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 16px;
+    }
+    #splash-logo svg { width: 32px; height: 32px; fill: white; }
+    #splash h1 { font-size: 22px; font-weight: 700; color: #0F172A; margin: 0 0 4px; }
+    #splash p  { font-size: 13px; color: #94A3B8; margin: 0 0 24px; }
+    #splash-bar {
+      width: 180px; height: 3px; background: #E2E8F0; border-radius: 3px; overflow: hidden;
+    }
+    #splash-fill {
+      height: 100%; background: #2563EB; border-radius: 3px;
+      animation: load 1.8s ease-in-out forwards;
+    }
+    @keyframes load { from { width: 0; } to { width: 100%; } }
+  </style>
+</head>
+<body>
+  <div id="splash">
+    <div id="splash-logo">
+      <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+    </div>
+    <h1>3As Complex</h1>
+    <p>Maintenance Management System</p>
+    <div id="splash-bar"><div id="splash-fill"></div></div>
+  </div>
+
+  <script>
+    window.addEventListener('flutter-first-frame', () => {
+      const splash = document.getElementById('splash');
+      if (splash) splash.style.display = 'none';
+    });
+  </script>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>
