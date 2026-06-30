@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/layout/app_shell.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../shared/widgets/stat_card.dart';
+import '../../../bills/presentation/screens/bills_screen.dart';
 import '../providers/dashboard_provider.dart';
 import 'admin_dashboard_screen.dart';
 import 'resident_dashboard_screen.dart';
@@ -27,14 +28,14 @@ class DashboardScreen extends ConsumerWidget {
                 const AdminDashboardScreen(),    // 0 - Dashboard
                 const _UsersPage(),              // 1 - Users
                 const _PropertiesPage(),         // 2 - Properties
-                const _ComingSoon('Billing'),    // 3 - Billing (Feature 3)
+                const BillsScreen(isAdmin: true),  // 3 - Billing (Feature 3)
                 const _ComingSoon('Payments'),   // 4 - Payments (Feature 4)
                 const _ComingSoon('Reports'),    // 5 - Reports (Feature 7)
                 const _ComingSoon('Settings'),   // 6 - Settings
               ]
             : [
                 const ResidentDashboardScreen(), // 0 - Home
-                const _ComingSoon('Bills'),      // 1 - Bills (Feature 3)
+                const BillsScreen(isAdmin: false), // 1 - Bills (Feature 3)
                 const _ComingSoon('Pay now'),    // 2 - Pay (Feature 4)
                 const _ComingSoon('Complaints'), // 3 - Complaints (Feature 5)
                 const _ComingSoon('Notices'),    // 4 - Notices (Feature 6)
