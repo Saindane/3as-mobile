@@ -1,97 +1,98 @@
-# 3As Complex — Flutter Mobile App
+# 3As Complex — Flutter Mobile & Web App
 
-Cross-platform Flutter app (Android + iOS) for the 3As Complex Maintenance Management System.
+Cross-platform Flutter app (Android + iOS + Web) for the 3As Complex Maintenance Management System.
 
 ## Tech Stack
 - **Framework**: Flutter 3.x (Dart)
-- **State management**: Riverpod 2.x
-- **Navigation**: GoRouter
-- **Networking**: Dio + interceptors
+- **State management**: Riverpod 2.x (StateNotifier + FutureProvider)
+- **Navigation**: GoRouter (path-based, auth redirect guard)
+- **Networking**: Dio + JWT auth interceptor + auto token refresh on 401
 - **Storage**: Flutter Secure Storage (tokens) + SharedPreferences
-- **Push**: Firebase Cloud Messaging
-- **Architecture**: Feature-first, Clean Architecture
+- **Push**: Firebase Cloud Messaging (FCM)
+- **Architecture**: Feature-first, Clean Architecture (data / domain / presentation)
 
 ## Project Structure
 ```
 lib/
 ├── core/
-│   ├── constants/      # API URLs, app constants
+│   ├── constants/      # API URLs, storage keys
 │   ├── network/        # Dio client, interceptors, error handling
-│   ├── router/         # GoRouter configuration
-│   ├── theme/          # App theme, colours, text styles
-│   └── utils/          # Validators, formatters, helpers
+│   ├── router/         # GoRouter with auth guard
+│   ├── theme/          # AppTheme, AppColors, AppTextStyles
+│   ├── layout/         # AppShell, responsive breakpoints, grid helpers
+│   └── utils/          # Validators, formatters
 ├── features/
-│   ├── auth/           # Feature 1 ✅
-│   │   ├── data/       # Models, repositories impl, remote datasource
-│   │   ├── domain/     # Entities, repo interfaces, use cases
-│   │   └── presentation/ # Riverpod providers, screens, widgets
-│   ├── dashboard/      # Feature 2 (next)
-│   ├── bills/          # Feature 3
-│   ├── payments/       # Feature 4
-│   ├── complaints/     # Feature 5
-│   ├── notices/        # Feature 6
-│   └── reports/        # Feature 7
+│   ├── auth/           # ✅ Feature 1
+│   ├── dashboard/      # ✅ Feature 2
+│   ├── bills/          # ✅ Feature 3
+│   ├── payments/       # ⏳ Feature 4
+│   ├── complaints/     # ⏳ Feature 5
+│   ├── notices/        # ⏳ Feature 6
+│   └── reports/        # ⏳ Feature 7
 └── shared/
-    ├── widgets/        # Common UI components
-    └── extensions/     # Dart extensions
+    └── widgets/        # StatCard, AppCard, AppBadge, EmptyState, SectionHeader
 ```
-
-## Feature Implementation Status
-- [x] **Feature 1**: Authentication (login, OTP, password reset, token refresh)
-- [ ] Feature 2: Dashboard + User Profile
-- [ ] Feature 3: Bills
-- [ ] Feature 4: Payments + QR
-- [ ] Feature 5: Complaints
-- [ ] Feature 6: Notices
-- [ ] Feature 7: MIS Reports
 
 ## Quick Start
+
 ```bash
-# Install dependencies
+# 1. Clone
+git clone https://github.com/Saindane/3as-mobile.git
+cd 3as-mobile
+
+# 2. Install dependencies
 flutter pub get
 
-# Run on device/emulator
-flutter run
+# 3. Set backend URL — open lib/core/constants/app_constants.dart
+#    For web/Chrome:         http://localhost:8000/api/v1
+#    For Android emulator:   http://10.0.2.2:8000/api/v1
 
-# Run tests
+# 4. Run on web
+flutter run -d chrome
+
+# 5. Run tests
 flutter test
-
-# Build APK
-flutter build apk --release
 ```
 
-## Environment
-Set your API base URL in `lib/core/constants/app_constants.dart`
-
-## Web Support
-
-The app runs on **Flutter Web** as a Progressive Web App (PWA).
-
-### Run on web
+## Running on Web
 ```bash
 flutter run -d chrome
-# or for release build:
+# Production build:
 flutter build web --release
 ```
 
-### Web features
-- Responsive layout: sidebar on desktop (≥900px), bottom nav on mobile
-- PWA manifest: installable from browser
-- Path-based routing (no `#` in URLs via `url_strategy`)
-- Custom loading splash screen
-- Mouse + trackpad + touch scroll support
-- Role switcher in desktop topbar (for demo/testing)
-- Desktop sidebar: brand, user chip, full nav, sign out
+## Responsive Layout (AppShell)
+| Screen width | Layout |
+|---|---|
+| < 900px (mobile) | AppBar + BottomNavigationBar |
+| ≥ 900px (desktop/web) | 240px persistent sidebar + topbar |
 
-### Breakpoints
-| Screen | Width | Layout |
-|---|---|---|
-| Mobile | < 600px | Bottom nav, stacked cards |
-| Tablet | 600–900px | Bottom nav, wider content |
-| Desktop / Web | ≥ 900px | Sidebar + topbar + full content |
+Role switcher visible in desktop topbar for demo/testing.
 
-### Deploy to web
+## Feature Implementation Status
+- [x] **Feature 1** — Authentication: LoginScreen, OtpScreen, NewPasswordScreen, JWT storage, auto-refresh on 401, GoRouter auth guard
+- [x] **Feature 2** — Dashboard + Users + Properties: ResidentDashboardScreen, AdminDashboardScreen, users list, properties list, ProfileScreen
+- [x] **Feature 3** — Web + Responsive layout: AppShell (sidebar/bottom nav), responsive breakpoints, PWA manifest, desktop role switcher
+- [x] **Feature 4** — Bills screens: BillsScreen (tabbed), BillCard, BillDetailScreen, GenerateBillsScreen, collection summary, penalty formula display
+- [ ] **Feature 5** — Payments: QR display, UTR + screenshot upload, submission flow, management verification screen
+- [ ] **Feature 6** — Complaints: raise form, lifecycle tracker, assignment, resolution
+- [ ] **Feature 7** — Notices: notice feed, publish form, FCM push indicator
+- [ ] **Feature 8** — MIS Reports: collection chart, defaulter list, complaint analytics
+
+## Demo Accounts
+| Name | Mobile | Password | Role |
+|---|---|---|---|
+| Rajesh Kumar | 9876543210 | demo1234 | Resident |
+| Priya Menon  | 8765432109 | demo1234 | Management |
+| Suresh Admin | 7654321098 | demo1234 | Admin |
+
+Tap any demo card on the login screen — no typing needed.
+
+## Web Deployment
 ```bash
 flutter build web --release
-# Output: build/web/ — deploy to Firebase Hosting, Netlify, or Nginx
+# Output: build/web/ → deploy to Firebase Hosting, Netlify, or Nginx
 ```
+
+## Backend repo
+https://github.com/Saindane/3as-backend
