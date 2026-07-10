@@ -14,15 +14,28 @@ class DashboardRemoteDatasource {
       return DashboardStats.fromJson(res.data as Map<String, dynamic>);
     } on DioException catch (e) {
       throw ApiException.fromDioException(e);
+    } catch (e) {
+      throw ApiException(message: e.toString());
     }
   }
 
   Future<UserProfile> getMe() async {
     try {
-      final res = await _client.get('${ApiEndpoints.users}/me');
-      return UserProfile.fromJson(res.data as Map<String, dynamic>);
+      // Use /auth/me — simpler response, no created_at issues
+      final res = await _client.get(ApiEndpoints.me);
+      final data = res.data as Map<String, dynamic>;
+      return UserProfile(
+        userId:   data['user_id']   as int,
+        name:     data['name']      as String,
+        mobile:   data['mobile']    as String,
+        email:    data['email']     as String?,
+        role:     data['role']      as String,
+        isActive: data['is_active'] as bool,
+      );
     } on DioException catch (e) {
       throw ApiException.fromDioException(e);
+    } catch (e) {
+      throw ApiException(message: e.toString());
     }
   }
 
@@ -33,6 +46,8 @@ class DashboardRemoteDatasource {
       return PropertyInfo.fromJson(res.data as Map<String, dynamic>);
     } on DioException catch (e) {
       throw ApiException.fromDioException(e);
+    } catch (e) {
+      throw ApiException(message: e.toString());
     }
   }
 
@@ -45,6 +60,8 @@ class DashboardRemoteDatasource {
       return List<Map<String, dynamic>>.from(res.data['items'] as List);
     } on DioException catch (e) {
       throw ApiException.fromDioException(e);
+    } catch (e) {
+      throw ApiException(message: e.toString());
     }
   }
 
@@ -54,6 +71,8 @@ class DashboardRemoteDatasource {
       return List<Map<String, dynamic>>.from(res.data['items'] as List);
     } on DioException catch (e) {
       throw ApiException.fromDioException(e);
+    } catch (e) {
+      throw ApiException(message: e.toString());
     }
   }
 }

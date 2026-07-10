@@ -24,7 +24,21 @@ class DashboardScreen extends ConsumerWidget {
 
     return profileAsync.when(
       loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
-      error: (e, _) => Scaffold(body: Center(child: Text('Error loading profile: $e'))),
+      error: (e, _) => Scaffold(body: Center(child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const Icon(Icons.error_outline, size: 48, color: Color(0xFFDC2626)),
+          const SizedBox(height: 16),
+          const Text('Could not load profile', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 8),
+          Text(e.toString(), textAlign: TextAlign.center, style: const TextStyle(color: Color(0xFF64748B))),
+          const SizedBox(height: 24),
+          ElevatedButton(
+            onPressed: () => ref.invalidate(userProfileProvider),
+            child: const Text('Retry'),
+          ),
+        ]),
+      ))),
       data: (profile) {
         final isPrivileged = profile.role == 'admin' || profile.role == 'management';
 
