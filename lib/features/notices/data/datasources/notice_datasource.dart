@@ -1,0 +1,49 @@
+import 'package:dio/dio.dart';
+import '../../../../core/constants/api_endpoints.dart';
+import '../../../../core/network/dio_client.dart';
+import '../../../../core/network/api_exception.dart';
+import '../models/notice_model.dart';
+
+class NoticeDatasource {
+  final DioClient _client;
+  NoticeDatasource(this._client);
+
+  Future<List<NoticeModel>> getNotices({bool activeOnly = true}) async {
+    try {
+      final res = await _client.get(ApiEndpoints.notices,
+          queryParameters: {'active_only': activeOnly});
+      return (res.data['items'] as List)
+          .map((j) => NoticeModel.fromJson(j as Map<String, dynamic>))
+          .toList();
+    } on DioException catch (e) {
+      throw ApiException.fromDioException(e);
+    }
+  }
+
+  Future<NoticeModel> createNotice({
+    required String title,
+    required String body,
+    required String category,
+    required String priority,
+  }) async {
+    try {
+      final res = await _client.post(ApiEndpoints.notices, data: {
+        'title':    title,
+        'body':     body,
+        'category': category,
+        'priority': priority,
+      });
+      return NoticeModel.fromJson(res.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw ApiException.fromDioException(e);
+    }
+  }
+
+  Future<void> deleteNotice(int noticeId) async {
+    try {
+      await _client.delete('${ApiEndpoints.notices}/$noticeId');
+    } on DioException catch (e) {
+      throw ApiException.fromDioException(e);
+    }
+  }
+}
