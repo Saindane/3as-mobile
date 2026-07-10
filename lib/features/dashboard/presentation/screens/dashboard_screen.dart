@@ -11,6 +11,7 @@ import '../../../notices/presentation/screens/notices_screen.dart';
 import '../../../reports/presentation/screens/reports_screen.dart';
 import '../../../settings/presentation/screens/settings_screen.dart';
 import '../providers/dashboard_provider.dart';
+import '../../../../core/router/app_router.dart';
 import 'admin_dashboard_screen.dart';
 import 'resident_dashboard_screen.dart';
 
@@ -336,7 +337,7 @@ class ProfileScreen extends ConsumerWidget {
             icon: const Icon(Icons.logout),
             label: const Text('Sign out', style: TextStyle(fontWeight: FontWeight.w600)),
             onPressed: () async {
-              // sign out handled in AppShell
+              await ref.read(authNotifierProvider).logout();
             },
           ),
         ]);

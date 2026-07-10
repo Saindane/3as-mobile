@@ -9,25 +9,33 @@ import '../../features/auth/presentation/screens/new_password_screen.dart';
 import '../../features/dashboard/presentation/screens/dashboard_screen.dart';
 import '../constants/app_constants.dart';
 
-// ── Auth state notifier that GoRouter can listen to ───────────────
+// ── Auth state notifier ───────────────────────────────────────────
 class AuthNotifier extends ChangeNotifier {
   final FlutterSecureStorage _storage;
   bool _isLoggedIn = false;
 
   AuthNotifier(this._storage) {
-    _checkLoginStatus();
+    _init();
   }
 
   bool get isLoggedIn => _isLoggedIn;
 
-  Future<void> _checkLoginStatus() async {
+  Future<void> _init() async {
     final token = await _storage.read(key: AppConstants.kAccessToken);
     _isLoggedIn = token != null;
     notifyListeners();
   }
 
+  /// Call after successful login
   Future<void> setLoggedIn(bool value) async {
     _isLoggedIn = value;
+    notifyListeners();
+  }
+
+  /// Call on logout — clears all stored tokens
+  Future<void> logout() async {
+    await _storage.deleteAll();
+    _isLoggedIn = false;
     notifyListeners();
   }
 }
@@ -36,7 +44,7 @@ final authNotifierProvider = ChangeNotifierProvider<AuthNotifier>((ref) {
   return AuthNotifier(const FlutterSecureStorage());
 });
 
-// ── Router provider ───────────────────────────────────────────────
+// ── Router ────────────────────────────────────────────────────────
 final routerProvider = Provider<GoRouter>((ref) {
   final authNotifier = ref.watch(authNotifierProvider);
 
@@ -44,12 +52,12 @@ final routerProvider = Provider<GoRouter>((ref) {
     initialLocation: '/login',
     refreshListenable: authNotifier,
     redirect: (context, state) {
-      final isLoggedIn   = authNotifier.isLoggedIn;
-      final isAuthRoute  = state.matchedLocation.startsWith('/login') ||
-                           state.matchedLocation.startsWith('/otp') ||
-                           state.matchedLocation.startsWith('/new-password');
+      final isLoggedIn  = authNotifier.isLoggedIn;
+      final isAuthRoute = state.matchedLocation.startsWith('/login') ||
+                          state.matchedLocation.startsWith('/otp') ||
+                          state.matchedLocation.startsWith('/new-password');
 
-      if (isLoggedIn && isAuthRoute)  return '/dashboard';
+      if (isLoggedIn && isAuthRoute)   return '/dashboard';
       if (!isLoggedIn && !isAuthRoute) return '/login';
       return null;
     },

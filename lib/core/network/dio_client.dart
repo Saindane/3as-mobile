@@ -85,7 +85,8 @@ class _AuthInterceptor extends Interceptor {
           final retried = await _dio.fetch(err.requestOptions);
           return handler.resolve(retried);
         } catch (_) {
-          // Refresh failed — clear tokens (force re-login)
+          // Refresh failed — clear tokens, next API call will get 401
+          // and GoRouter redirect will send user back to /login
           await _storage.deleteAll();
         }
       }

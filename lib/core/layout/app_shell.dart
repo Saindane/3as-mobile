@@ -288,8 +288,7 @@ class _AppShellState extends ConsumerState<AppShell> {
   }
 
   Future<void> _signOut() async {
-    await ref.read(authRepositoryProvider).logout();
-    ref.read(authNotifierProvider).setLoggedIn(false);
+    await ref.read(authNotifierProvider).logout();
   }
 }
 
