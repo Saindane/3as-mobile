@@ -30,21 +30,23 @@ class DashboardScreen extends ConsumerWidget {
         // Build pages list — index matches NavItem.index in AppShell
         final pages = isPrivileged
             ? [
-                const AdminDashboardScreen(),    // 0 - Dashboard
-                const _UsersPage(),                          // 1 - Users
-                const _PropertiesPage(),                     // 2 - Properties
-                const BillsScreen(isAdmin: true),        // 3 - Billing
-                const PaymentsScreen(isAdmin: true),   // 4 - Payments
-                const ReportsScreen(),                 // 5 - Reports
-                const SettingsScreen(),                // 6 - Settings
+                const AdminDashboardScreen(),              // 0 - Dashboard
+                const _UsersPage(),                        // 1 - Users
+                const _PropertiesPage(),                   // 2 - Properties
+                const BillsScreen(isAdmin: true),          // 3 - Billing
+                const PaymentsScreen(isAdmin: true),       // 4 - Payments
+                const ComplaintsScreen(isAdmin: true),     // 5 - Complaints
+                const NoticesScreen(isAdmin: true),        // 6 - Notices
+                const ReportsScreen(),                     // 7 - Reports
+                const SettingsScreen(),                    // 8 - Settings
               ]
             : [
-                const ResidentDashboardScreen(), // 0 - Home
-                const BillsScreen(isAdmin: false),     // 1 - Bills
-                const PaymentsScreen(isAdmin: false),  // 2 - Pay now
-                const ComplaintsScreen(isAdmin: false), // 3 - Complaints
-                const NoticesScreen(isAdmin: false),    // 4 - Notices (resident)
-                const ProfileScreen(),                  // 5 - Profile
+                const ResidentDashboardScreen(),         // 0 - Home
+                const BillsScreen(isAdmin: false),       // 1 - Bills
+                const PaymentsScreen(isAdmin: false),    // 2 - Pay now
+                const ComplaintsScreen(isAdmin: false),  // 3 - Complaints
+                const NoticesScreen(isAdmin: false),     // 4 - Notices
+                const ProfileScreen(),                   // 5 - Profile
               ];
 
         return AppShell(
