@@ -10,25 +10,28 @@ class ApiEndpoints {
   static const String passwordReset = '/auth/password/reset';
   static const String fcmToken      = '/auth/fcm-token';
 
-  // Users (Feature 2)
+  // Users
   static const String users         = '/users';
 
-  // Properties (Feature 2)
+  // Properties
   static const String properties    = '/properties';
 
-  // Bills (Feature 3)
+  // Bills
   static const String bills         = '/bills';
   static const String generateBills = '/bills/generate';
 
-  // Payments (Feature 4)
+  // Payments
   static const String payments      = '/payments';
 
-  // Complaints (Feature 5)
+  // Complaints
   static const String complaints    = '/complaints';
 
-  // Notices (Feature 6)
+  // Notices
   static const String notices       = '/notices';
 
-  // Reports (Feature 7)
+  // Reports
   static const String reports       = '/reports';
+
+  // Settings
+  static const String settings      = '/settings';
 }

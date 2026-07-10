@@ -5,6 +5,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../shared/widgets/stat_card.dart';
 import '../../data/models/notice_model.dart';
 import '../providers/notice_provider.dart';
+import '../../data/repositories/notice_repository.dart';
 
 class NoticesScreen extends ConsumerWidget {
   final bool isAdmin;

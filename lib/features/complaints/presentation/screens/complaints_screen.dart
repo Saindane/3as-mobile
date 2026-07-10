@@ -5,6 +5,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../shared/widgets/stat_card.dart';
 import '../../data/models/complaint_model.dart';
 import '../providers/complaint_provider.dart';
+import '../../data/repositories/complaint_repository.dart';
 import 'raise_complaint_screen.dart';
 
 class ComplaintsScreen extends ConsumerStatefulWidget {
