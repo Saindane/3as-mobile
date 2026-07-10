@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/validators.dart';
 import '../providers/auth_provider.dart';
+import '../../../../core/router/app_router.dart';
 import '../widgets/auth_text_field.dart';
 import '../widgets/role_badge.dart';
 
@@ -42,7 +43,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     // Navigate on success
     ref.listen(loginProvider, (_, next) {
-      if (next.success) context.go('/dashboard');
+      if (next.success) {
+        ref.read(authNotifierProvider).setLoggedIn(true);
+      }
       if (next.error != null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

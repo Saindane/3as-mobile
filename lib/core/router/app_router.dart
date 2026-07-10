@@ -9,21 +9,52 @@ import '../../features/auth/presentation/screens/new_password_screen.dart';
 import '../../features/dashboard/presentation/screens/dashboard_screen.dart';
 import '../constants/app_constants.dart';
 
+// ── Auth state notifier that GoRouter can listen to ───────────────
+class AuthNotifier extends ChangeNotifier {
+  final FlutterSecureStorage _storage;
+  bool _isLoggedIn = false;
+
+  AuthNotifier(this._storage) {
+    _checkLoginStatus();
+  }
+
+  bool get isLoggedIn => _isLoggedIn;
+
+  Future<void> _checkLoginStatus() async {
+    final token = await _storage.read(key: AppConstants.kAccessToken);
+    _isLoggedIn = token != null;
+    notifyListeners();
+  }
+
+  Future<void> setLoggedIn(bool value) async {
+    _isLoggedIn = value;
+    notifyListeners();
+  }
+}
+
+final authNotifierProvider = ChangeNotifierProvider<AuthNotifier>((ref) {
+  return AuthNotifier(const FlutterSecureStorage());
+});
+
+// ── Router provider ───────────────────────────────────────────────
 final routerProvider = Provider<GoRouter>((ref) {
+  final authNotifier = ref.watch(authNotifierProvider);
+
   return GoRouter(
     initialLocation: '/login',
-    redirect: (context, state) async {
-      final storage = const FlutterSecureStorage();
-      final token = await storage.read(key: AppConstants.kAccessToken);
-      final isAuthRoute = state.matchedLocation.startsWith('/login') ||
-          state.matchedLocation.startsWith('/otp') ||
-          state.matchedLocation.startsWith('/new-password');
-      if (token != null && isAuthRoute) return '/dashboard';
-      if (token == null && !isAuthRoute) return '/login';
+    refreshListenable: authNotifier,
+    redirect: (context, state) {
+      final isLoggedIn   = authNotifier.isLoggedIn;
+      final isAuthRoute  = state.matchedLocation.startsWith('/login') ||
+                           state.matchedLocation.startsWith('/otp') ||
+                           state.matchedLocation.startsWith('/new-password');
+
+      if (isLoggedIn && isAuthRoute)  return '/dashboard';
+      if (!isLoggedIn && !isAuthRoute) return '/login';
       return null;
     },
     routes: [
-      GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
+      GoRoute(path: '/login',    builder: (_, __) => const LoginScreen()),
       GoRoute(
         path: '/otp',
         builder: (_, state) {

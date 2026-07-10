@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../theme/app_theme.dart';
 import '../layout/responsive.dart';
 import '../../features/auth/data/repositories/auth_repository_impl.dart';
+import '../router/app_router.dart';
 import '../../features/dashboard/presentation/providers/dashboard_provider.dart';
 
 class NavItem {
@@ -288,7 +289,7 @@ class _AppShellState extends ConsumerState<AppShell> {
 
   Future<void> _signOut() async {
     await ref.read(authRepositoryProvider).logout();
-    if (mounted) context.go('/login');
+    ref.read(authNotifierProvider).setLoggedIn(false);
   }
 }
 
