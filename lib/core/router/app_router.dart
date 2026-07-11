@@ -9,12 +9,15 @@ import '../../features/auth/presentation/screens/new_password_screen.dart';
 import '../../features/dashboard/presentation/screens/dashboard_screen.dart';
 import '../constants/app_constants.dart';
 
-// ── Auth state notifier ───────────────────────────────────────────
+// ── Session key — increment to bust ALL provider caches ──────────
+final sessionKeyProvider = StateProvider<int>((ref) => 0);
+
 class AuthNotifier extends ChangeNotifier {
   final FlutterSecureStorage _storage;
+  final Ref _ref;
   bool _isLoggedIn = false;
 
-  AuthNotifier(this._storage) {
+  AuthNotifier(this._storage, this._ref) {
     _init();
   }
 
@@ -26,22 +29,28 @@ class AuthNotifier extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Call after successful login
+  /// Called after successful login — increment session key first
+  /// so ALL providers reload fresh data for the new user
   Future<void> setLoggedIn(bool value) async {
+    if (value) {
+      // Bust all provider caches before navigating to dashboard
+      _ref.read(sessionKeyProvider.notifier).state++;
+    }
     _isLoggedIn = value;
     notifyListeners();
   }
 
-  /// Call on logout — clears all stored tokens
+  /// Called on logout
   Future<void> logout() async {
     await _storage.deleteAll();
+    _ref.read(sessionKeyProvider.notifier).state++;
     _isLoggedIn = false;
     notifyListeners();
   }
 }
 
 final authNotifierProvider = ChangeNotifierProvider<AuthNotifier>((ref) {
-  return AuthNotifier(const FlutterSecureStorage());
+  return AuthNotifier(const FlutterSecureStorage(), ref);
 });
 
 // ── Router ────────────────────────────────────────────────────────
@@ -56,7 +65,6 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isAuthRoute = state.matchedLocation.startsWith('/login') ||
                           state.matchedLocation.startsWith('/otp') ||
                           state.matchedLocation.startsWith('/new-password');
-
       if (isLoggedIn && isAuthRoute)   return '/dashboard';
       if (!isLoggedIn && !isAuthRoute) return '/login';
       return null;
