@@ -199,7 +199,7 @@ class _AddUserDialogState extends ConsumerState<_AddUserDialog> {
         'name':     _nameCtr.text.trim(),
         'mobile':   _mobileCtr.text.trim(),
         'password': _passwordCtr.text.trim(),
-        'role':     _role,
+        'role':     _role.toUpperCase(),
       });
       if (mounted) {
         Navigator.pop(context);
@@ -221,7 +221,8 @@ class _AddUserDialogState extends ConsumerState<_AddUserDialog> {
           style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
       content: SizedBox(
         width: 400,
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
+        child: SingleChildScrollView(
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
           if (_error != null)
             Container(
               margin: const EdgeInsets.only(bottom: 12),
@@ -278,6 +279,7 @@ class _AddUserDialogState extends ConsumerState<_AddUserDialog> {
             onChanged: (v) => setState(() => _role = v!),
           ),
         ]),
+        ),
       ),
       actions: [
         TextButton(
