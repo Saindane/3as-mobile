@@ -221,8 +221,7 @@ class _AddUserDialogState extends ConsumerState<_AddUserDialog> {
             final field = (err['loc'] as List).last.toString();
             final message = err['msg'].toString().replaceAll('Value error, ', '');
             return '$field: $message';
-          }).join('
-');
+          }).join(', ');
         } else if (data is Map && data['detail'] is String) {
           msg = data['detail'];
         } else {
