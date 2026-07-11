@@ -173,6 +173,7 @@ class _AddUserDialog extends ConsumerStatefulWidget {
 class _AddUserDialogState extends ConsumerState<_AddUserDialog> {
   final _nameCtr     = TextEditingController();
   final _mobileCtr   = TextEditingController();
+  final _emailCtr    = TextEditingController();
   final _passwordCtr = TextEditingController();
   String _role       = 'resident';
   bool   _isLoading  = false;
@@ -182,6 +183,7 @@ class _AddUserDialogState extends ConsumerState<_AddUserDialog> {
   void dispose() {
     _nameCtr.dispose();
     _mobileCtr.dispose();
+    _emailCtr.dispose();
     _passwordCtr.dispose();
     super.dispose();
   }
@@ -199,6 +201,7 @@ class _AddUserDialogState extends ConsumerState<_AddUserDialog> {
       await client.post(ApiEndpoints.users, data: {
         'name':     _nameCtr.text.trim(),
         'mobile':   _mobileCtr.text.trim(),
+        'email':    _emailCtr.text.trim().isEmpty ? null : _emailCtr.text.trim(),
         'password': _passwordCtr.text.trim(),
         'role':     _role.toUpperCase(),
       });
@@ -282,6 +285,16 @@ class _AddUserDialogState extends ConsumerState<_AddUserDialog> {
               border: OutlineInputBorder(),
               prefixIcon: Icon(Icons.phone_outlined),
               prefixText: '+91 ',
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _emailCtr,
+            keyboardType: TextInputType.emailAddress,
+            decoration: const InputDecoration(
+              labelText: 'Email (optional)',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.email_outlined),
             ),
           ),
           const SizedBox(height: 12),
