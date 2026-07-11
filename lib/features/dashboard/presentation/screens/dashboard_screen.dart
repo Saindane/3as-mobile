@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/layout/app_shell.dart';
@@ -209,6 +210,28 @@ class _AddUserDialogState extends ConsumerState<_AddUserDialog> {
           backgroundColor: Color(0xFF16A34A),
         ));
       }
+    } on DioException catch (e) {
+      String msg = 'Something went wrong';
+      try {
+        final data = e.response?.data;
+        if (data is Map && data['detail'] is List) {
+          // Pydantic validation error — extract messages
+          final errors = data['detail'] as List;
+          msg = errors.map((err) {
+            final field = (err['loc'] as List).last.toString();
+            final message = err['msg'].toString().replaceAll('Value error, ', '');
+            return '$field: $message';
+          }).join('
+');
+        } else if (data is Map && data['detail'] is String) {
+          msg = data['detail'];
+        } else {
+          msg = 'Error ${e.response?.statusCode}';
+        }
+      } catch (_) {
+        msg = e.message ?? 'Request failed';
+      }
+      setState(() { _isLoading = false; _error = msg; });
     } catch (e) {
       setState(() { _isLoading = false; _error = e.toString(); });
     }
@@ -226,13 +249,22 @@ class _AddUserDialogState extends ConsumerState<_AddUserDialog> {
           if (_error != null)
             Container(
               margin: const EdgeInsets.only(bottom: 12),
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: const Color(0xFFFEE2E2),
                 borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFDC2626).withOpacity(.3)),
               ),
-              child: Text(_error!,
-                  style: const TextStyle(color: Color(0xFFDC2626), fontSize: 13)),
+              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Icon(Icons.error_outline, color: Color(0xFFDC2626), size: 18),
+                const SizedBox(width: 8),
+                Expanded(child: Text(_error!,
+                    style: const TextStyle(
+                      color: Color(0xFFDC2626),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ))),
+              ]),
             ),
           TextField(
             controller: _nameCtr,
