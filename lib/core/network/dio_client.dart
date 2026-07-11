@@ -1,7 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:pretty_dio_logger/pretty_dio_logger.dart';
 import '../constants/app_constants.dart';
 import '../constants/api_endpoints.dart';
 
@@ -23,7 +22,6 @@ class DioClient {
 
     _dio.interceptors.addAll([
       _AuthInterceptor(_storage, _dio),
-      PrettyDioLogger(requestHeader: false, requestBody: true, responseBody: true, error: true),
     ]);
   }
 
