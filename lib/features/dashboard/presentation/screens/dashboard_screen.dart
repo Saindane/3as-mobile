@@ -206,6 +206,10 @@ class _AddUserDialogState extends ConsumerState<_AddUserDialog> {
         'role':     _role.toUpperCase(),
       });
       if (mounted) {
+        // Invalidate using dialog's own ref — more reliable than callback
+        ref.invalidate(usersListProvider);
+        // Small delay to let provider refresh before closing
+        await Future.delayed(const Duration(milliseconds: 300));
         Navigator.pop(context);
         widget.onSuccess();
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
