@@ -638,7 +638,7 @@ class _PropertiesPage extends ConsumerWidget {
               AppBadge(label: '${props.length} units', color: AppColors.primary),
               const SizedBox(width: 8),
               ElevatedButton.icon(
-                onPressed: () {},
+                onPressed: () => _showAddPropertyDialog(context, ref),
                 icon: const Icon(Icons.add_home_outlined, size: 16),
                 label: const Text('Add unit'),
                 style: ElevatedButton.styleFrom(
@@ -656,6 +656,177 @@ class _PropertiesPage extends ConsumerWidget {
           )),
         ],
       ),
+    );
+  }
+}
+
+void _showAddPropertyDialog(BuildContext context, WidgetRef ref) {
+  showDialog(
+    context: context,
+    builder: (_) => _AddPropertyDialog(
+      onSuccess: () => ref.invalidate(propertiesListProvider),
+    ),
+  );
+}
+
+class _AddPropertyDialog extends ConsumerStatefulWidget {
+  final VoidCallback onSuccess;
+  const _AddPropertyDialog({required this.onSuccess});
+
+  @override
+  ConsumerState<_AddPropertyDialog> createState() => _AddPropertyDialogState();
+}
+
+class _AddPropertyDialogState extends ConsumerState<_AddPropertyDialog> {
+  final _unitNoCtr   = TextEditingController();
+  final _floorCtr    = TextEditingController();
+  final _areaCtr     = TextEditingController();
+  String  _type      = 'RESIDENTIAL';
+  int?    _ownerId;
+  bool    _isLoading = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _unitNoCtr.dispose();
+    _floorCtr.dispose();
+    _areaCtr.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (_unitNoCtr.text.trim().isEmpty || _floorCtr.text.trim().isEmpty) {
+      setState(() => _error = 'Unit no and floor are required');
+      return;
+    }
+    final floor = int.tryParse(_floorCtr.text.trim());
+    if (floor == null) {
+      setState(() => _error = 'Floor must be a number');
+      return;
+    }
+    setState(() { _isLoading = true; _error = null; });
+    try {
+      final client = ref.read(dioClientProvider);
+      await client.post(ApiEndpoints.properties, data: {
+        'unit_no':   _unitNoCtr.text.trim().toUpperCase(),
+        'floor':     floor,
+        'type':      _type.toLowerCase(),
+        'area_sqft': _areaCtr.text.trim().isEmpty
+            ? null : double.tryParse(_areaCtr.text.trim()),
+        if (_ownerId != null) 'owner_id': _ownerId,
+      });
+      if (mounted) {
+        ref.invalidate(propertiesListProvider);
+        await Future.delayed(const Duration(milliseconds: 300));
+        Navigator.pop(context);
+        widget.onSuccess();
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Property added successfully'),
+          backgroundColor: Color(0xFF16A34A),
+        ));
+      }
+    } on DioException catch (e) {
+      String msg = 'Something went wrong';
+      try {
+        final data = e.response?.data;
+        if (data is Map && data['detail'] is String) {
+          msg = data['detail'];
+        } else if (data is Map && data['detail'] is List) {
+          final errors = data['detail'] as List;
+          msg = errors.map((err) {
+            final field = (err['loc'] as List).last.toString();
+            final message = err['msg'].toString().replaceAll('Value error, ', '');
+            return '$field: $message';
+          }).join(', ');
+        }
+      } catch (_) {}
+      setState(() { _isLoading = false; _error = msg; });
+    } catch (e) {
+      setState(() { _isLoading = false; _error = e.toString(); });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Add new unit',
+          style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+      content: SizedBox(width: 400, child: SingleChildScrollView(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          if (_error != null)
+            Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEE2E2),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFDC2626).withOpacity(.3)),
+              ),
+              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Icon(Icons.error_outline, color: Color(0xFFDC2626), size: 18),
+                const SizedBox(width: 8),
+                Expanded(child: Text(_error!,
+                    style: const TextStyle(color: Color(0xFFDC2626), fontSize: 13))),
+              ]),
+            ),
+          TextField(
+            controller: _unitNoCtr,
+            textCapitalization: TextCapitalization.characters,
+            decoration: const InputDecoration(
+              labelText: 'Unit number (e.g. 4B)',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.apartment_outlined),
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _floorCtr,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(
+              labelText: 'Floor number',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.layers_outlined),
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _areaCtr,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: const InputDecoration(
+              labelText: 'Area in sq ft (optional)',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.square_foot_outlined),
+            ),
+          ),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<String>(
+            value: _type,
+            decoration: const InputDecoration(
+              labelText: 'Type',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.home_work_outlined),
+            ),
+            items: const [
+              DropdownMenuItem(value: 'RESIDENTIAL', child: Text('Residential')),
+              DropdownMenuItem(value: 'COMMERCIAL',  child: Text('Commercial')),
+            ],
+            onChanged: (v) => setState(() => _type = v!),
+          ),
+        ]),
+      )),
+      actions: [
+        TextButton(
+          onPressed: _isLoading ? null : () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: _isLoading ? null : _submit,
+          child: _isLoading
+              ? const SizedBox(width: 16, height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+              : const Text('Add unit'),
+        ),
+      ],
     );
   }
 }
