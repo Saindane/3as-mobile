@@ -2,9 +2,10 @@ class TokenResponseModel {
   final String accessToken;
   final String refreshToken;
   final String tokenType;
-  final int userId;
+  final int    userId;
   final String name;
   final String role;
+  final String mobile;  // optional from backend — defaults to empty
 
   const TokenResponseModel({
     required this.accessToken,
@@ -13,12 +14,14 @@ class TokenResponseModel {
     required this.userId,
     required this.name,
     required this.role,
+    this.mobile = '',
   });
 
   factory TokenResponseModel.fromJson(Map<String, dynamic> json) => TokenResponseModel(
-        accessToken:  json['access_token'] as String,
+        accessToken:  json['access_token']  as String,
         refreshToken: json['refresh_token'] as String,
-        tokenType:    json['token_type'] as String? ?? 'bearer',
+        tokenType:    json['token_type']    as String? ?? 'bearer',
+        mobile:       json['mobile']        as String? ?? '',
         userId:       json['user_id'] as int,
         name:         json['name'] as String,
         role:         json['role'] as String,
