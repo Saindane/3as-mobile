@@ -346,29 +346,32 @@ class _AddUserDialogState extends ConsumerState<_AddUserDialog> {
   }
 }
 
-class _UserCard extends StatelessWidget {
+class _UserCard extends ConsumerWidget {
   final Map<String, dynamic> user;
   const _UserCard(this.user);
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final role   = user['role'] as String;
     final active = user['is_active'] as bool;
+    final userId = user['user_id'] as int;
+    final name   = user['name'] as String;
     final color  = role == 'ADMIN' ? AppColors.error
                  : role == 'MANAGEMENT' ? AppColors.warning
                  : AppColors.primary;
+
     return AppCard(
       padding: const EdgeInsets.all(14),
       child: Row(children: [
         CircleAvatar(
           radius: 20, backgroundColor: color.withOpacity(.12),
-          child: Text((user['name'] as String)[0].toUpperCase(),
+          child: Text(name[0].toUpperCase(),
               style: TextStyle(color: color, fontWeight: FontWeight.w700)),
         ),
         const SizedBox(width: 12),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(user['name'] as String, style: AppTextStyles.bodyBold),
-          Text('+91 ${user['mobile']}', style: AppTextStyles.caption),
+          Text(name, style: AppTextStyles.bodyBold),
+          Text('+91 \${user['mobile']}', style: AppTextStyles.caption),
           if (user['email'] != null)
             Text(user['email'] as String, style: AppTextStyles.caption),
         ])),
@@ -382,13 +385,237 @@ class _UserCard extends StatelessWidget {
           ),
         ]),
         const SizedBox(width: 8),
-        IconButton(
+        // ── 3-dot menu ──────────────────────────────────
+        PopupMenuButton<String>(
           icon: const Icon(Icons.more_vert, size: 18, color: AppColors.textMuted),
-          onPressed: () {},
+          onSelected: (action) => _handleAction(context, ref, action, userId, name, active, role),
+          itemBuilder: (_) => [
+            const PopupMenuItem(
+              value: 'edit',
+              child: Row(children: [
+                Icon(Icons.edit_outlined, size: 16, color: AppColors.primary),
+                SizedBox(width: 8),
+                Text('Edit'),
+              ]),
+            ),
+            PopupMenuItem(
+              value: 'toggle',
+              child: Row(children: [
+                Icon(active ? Icons.block_outlined : Icons.check_circle_outline,
+                    size: 16, color: active ? AppColors.warning : AppColors.success),
+                const SizedBox(width: 8),
+                Text(active ? 'Deactivate' : 'Activate'),
+              ]),
+            ),
+            const PopupMenuItem(
+              value: 'delete',
+              child: Row(children: [
+                Icon(Icons.delete_outline, size: 16, color: AppColors.error),
+                SizedBox(width: 8),
+                Text('Delete', style: TextStyle(color: AppColors.error)),
+              ]),
+            ),
+          ],
         ),
       ]),
     );
   }
+
+  Future<void> _handleAction(BuildContext context, WidgetRef ref,
+      String action, int userId, String name, bool isActive, String role) async {
+    final client = ref.read(dioClientProvider);
+    switch (action) {
+
+      case 'edit':
+        showDialog(
+          context: context,
+          builder: (_) => _EditUserDialog(
+            user: user,
+            onSuccess: () => ref.invalidate(usersListProvider),
+          ),
+        );
+        break;
+
+      case 'toggle':
+        final confirm = await showDialog<bool>(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: Text(isActive ? 'Deactivate user' : 'Activate user'),
+            content: Text(isActive
+                ? 'Deactivate \$name? They will not be able to login.'
+                : 'Activate \$name? They will be able to login again.'),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: isActive ? AppColors.warning : AppColors.success),
+                child: Text(isActive ? 'Deactivate' : 'Activate'),
+              ),
+            ],
+          ),
+        );
+        if (confirm == true && context.mounted) {
+          try {
+            await client.patch('\${ApiEndpoints.users}/\$userId',
+                data: {'is_active': !isActive});
+            ref.invalidate(usersListProvider);
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text('\$name \${isActive ? 'deactivated' : 'activated'}'),
+                backgroundColor: isActive ? AppColors.warning : AppColors.success,
+              ));
+            }
+          } catch (e) {
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text('Error: \$e'), backgroundColor: AppColors.error));
+            }
+          }
+        }
+        break;
+
+      case 'delete':
+        final confirm = await showDialog<bool>(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: const Text('Delete user'),
+            content: Text('Delete \$name permanently? This cannot be undone.'),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+                child: const Text('Delete'),
+              ),
+            ],
+          ),
+        );
+        if (confirm == true && context.mounted) {
+          try {
+            await client.delete('\${ApiEndpoints.users}/\$userId');
+            ref.invalidate(usersListProvider);
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text('\$name deleted'),
+                backgroundColor: AppColors.error,
+              ));
+            }
+          } catch (e) {
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text('Error: \$e'), backgroundColor: AppColors.error));
+            }
+          }
+        }
+        break;
+    }
+  }
+}
+
+// ── Edit User Dialog ──────────────────────────────────────────────
+class _EditUserDialog extends ConsumerStatefulWidget {
+  final Map<String, dynamic> user;
+  final VoidCallback onSuccess;
+  const _EditUserDialog({required this.user, required this.onSuccess});
+
+  @override
+  ConsumerState<_EditUserDialog> createState() => _EditUserDialogState();
+}
+
+class _EditUserDialogState extends ConsumerState<_EditUserDialog> {
+  late final TextEditingController _nameCtr;
+  late final TextEditingController _emailCtr;
+  late String _role;
+  bool _isLoading = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameCtr  = TextEditingController(text: widget.user['name'] as String);
+    _emailCtr = TextEditingController(text: widget.user['email'] as String? ?? '');
+    _role     = (widget.user['role'] as String).toLowerCase();
+    if (!['resident','management','admin'].contains(_role)) _role = 'resident';
+  }
+
+  @override
+  void dispose() { _nameCtr.dispose(); _emailCtr.dispose(); super.dispose(); }
+
+  Future<void> _submit() async {
+    if (_nameCtr.text.trim().isEmpty) {
+      setState(() => _error = 'Name is required');
+      return;
+    }
+    setState(() { _isLoading = true; _error = null; });
+    try {
+      final client = ref.read(dioClientProvider);
+      final userId = widget.user['user_id'] as int;
+      await client.patch('\${ApiEndpoints.users}/\$userId', data: {
+        'name':  _nameCtr.text.trim(),
+        'email': _emailCtr.text.trim().isEmpty ? null : _emailCtr.text.trim(),
+        'role':  _role.toUpperCase(),
+      });
+      if (mounted) {
+        Navigator.pop(context);
+        widget.onSuccess();
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('User updated successfully'),
+          backgroundColor: AppColors.success,
+        ));
+      }
+    } catch (e) {
+      setState(() { _isLoading = false; _error = e.toString(); });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: const Text('Edit user',
+        style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+    content: SizedBox(width: 400, child: SingleChildScrollView(
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        if (_error != null)
+          Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(color: const Color(0xFFFEE2E2),
+                borderRadius: BorderRadius.circular(8)),
+            child: Text(_error!, style: const TextStyle(color: Color(0xFFDC2626))),
+          ),
+        TextField(controller: _nameCtr,
+            decoration: const InputDecoration(labelText: 'Full name',
+                border: OutlineInputBorder(), prefixIcon: Icon(Icons.person_outline))),
+        const SizedBox(height: 12),
+        TextField(controller: _emailCtr, keyboardType: TextInputType.emailAddress,
+            decoration: const InputDecoration(labelText: 'Email (optional)',
+                border: OutlineInputBorder(), prefixIcon: Icon(Icons.email_outlined))),
+        const SizedBox(height: 12),
+        DropdownButtonFormField<String>(
+          value: _role,
+          decoration: const InputDecoration(labelText: 'Role',
+              border: OutlineInputBorder(), prefixIcon: Icon(Icons.badge_outlined)),
+          items: const [
+            DropdownMenuItem(value: 'resident',   child: Text('Resident')),
+            DropdownMenuItem(value: 'management', child: Text('Management')),
+            DropdownMenuItem(value: 'admin',      child: Text('Admin')),
+          ],
+          onChanged: (v) => setState(() => _role = v!),
+        ),
+      ]),
+    )),
+    actions: [
+      TextButton(onPressed: _isLoading ? null : () => Navigator.pop(context),
+          child: const Text('Cancel')),
+      ElevatedButton(
+        onPressed: _isLoading ? null : _submit,
+        child: _isLoading
+            ? const SizedBox(width: 16, height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+            : const Text('Save changes'),
+      ),
+    ],
+  );
 }
 
 // ── Properties page ───────────────────────────────────────────────
