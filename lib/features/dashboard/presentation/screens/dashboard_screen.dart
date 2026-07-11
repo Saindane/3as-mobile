@@ -407,14 +407,16 @@ class _UserCard extends ConsumerWidget {
                 Text(active ? 'Deactivate' : 'Activate'),
               ]),
             ),
-            const PopupMenuItem(
-              value: 'delete',
-              child: Row(children: [
-                Icon(Icons.delete_outline, size: 16, color: AppColors.error),
-                SizedBox(width: 8),
-                Text('Delete', style: TextStyle(color: AppColors.error)),
-              ]),
-            ),
+            // Delete only available for admin
+            if (TokenStore.role?.toUpperCase() == 'ADMIN')
+              const PopupMenuItem(
+                value: 'delete',
+                child: Row(children: [
+                  Icon(Icons.delete_outline, size: 16, color: AppColors.error),
+                  SizedBox(width: 8),
+                  Text('Delete', style: TextStyle(color: AppColors.error)),
+                ]),
+              ),
           ],
         ),
       ]),
