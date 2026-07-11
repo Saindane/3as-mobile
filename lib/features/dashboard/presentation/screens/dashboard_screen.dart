@@ -870,25 +870,29 @@ class _AddPropertyDialogState extends ConsumerState<_AddPropertyDialog> {
   }
 }
 
-class _PropertyCard extends StatelessWidget {
+class _PropertyCard extends ConsumerWidget {
   final Map<String, dynamic> prop;
   const _PropertyCard(this.prop);
 
   @override
-  Widget build(BuildContext context) {
-    final owner = prop['owner'] as Map<String, dynamic>?;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final owner      = prop['owner']       as Map<String, dynamic>?;
+    final propertyId = prop['property_id'] as int;
+    final unitNo     = prop['unit_no']     as String;
+
     return AppCard(
       padding: const EdgeInsets.all(14),
       child: Row(children: [
         Container(
           width: 44, height: 44,
           decoration: BoxDecoration(
-            color: AppColors.primaryLight, borderRadius: BorderRadius.circular(10)),
+            color: AppColors.primaryLight,
+            borderRadius: BorderRadius.circular(10)),
           child: const Icon(Icons.apartment, color: AppColors.primary, size: 22),
         ),
         const SizedBox(width: 14),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Unit ${prop['unit_no']}', style: AppTextStyles.bodyBold),
+          Text('Unit $unitNo', style: AppTextStyles.bodyBold),
           Text('Floor ${prop['floor']}'
               '${prop['area_sqft'] != null ? ' · ${prop['area_sqft']} sq ft' : ''}',
               style: AppTextStyles.caption),
@@ -898,19 +902,73 @@ class _PropertyCard extends StatelessWidget {
         ])),
         Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
           AppBadge(
-            label: (prop['type'] as String? ?? 'residential').toUpperCase(),
+            label: (prop['type'] as String? ?? 'RESIDENTIAL').toUpperCase(),
             color: AppColors.primary,
           ),
         ]),
         const SizedBox(width: 8),
-        IconButton(
+        PopupMenuButton<String>(
           icon: const Icon(Icons.more_vert, size: 18, color: AppColors.textMuted),
-          onPressed: () {},
+          onSelected: (action) => _handleAction(context, ref, action, propertyId, unitNo),
+          itemBuilder: (_) => [
+            const PopupMenuItem(
+              value: 'delete',
+              child: Row(children: [
+                Icon(Icons.delete_outline, size: 16, color: AppColors.error),
+                SizedBox(width: 8),
+                Text('Delete', style: TextStyle(color: AppColors.error)),
+              ]),
+            ),
+          ],
         ),
       ]),
     );
   }
+
+  Future<void> _handleAction(BuildContext context, WidgetRef ref,
+      String action, int propertyId, String unitNo) async {
+    if (action != 'delete') return;
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Delete unit'),
+        content: Text('Delete Unit $unitNo permanently? This cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirm == true && context.mounted) {
+      try {
+        await ref.read(dioClientProvider).delete(
+            '${ApiEndpoints.properties}/$propertyId');
+        ref.invalidate(propertiesListProvider);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Unit $unitNo deleted'),
+            backgroundColor: AppColors.error,
+          ));
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: AppColors.error,
+          ));
+        }
+      }
+    }
+  }
 }
+
 
 // ── Profile screen (exported for use in shell) ────────────────────
 class ProfileScreen extends ConsumerWidget {
