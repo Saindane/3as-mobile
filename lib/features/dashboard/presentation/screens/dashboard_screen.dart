@@ -685,6 +685,23 @@ class _AddPropertyDialogState extends ConsumerState<_AddPropertyDialog> {
   int?    _ownerId;
   bool    _isLoading = false;
   String? _error;
+  List<Map<String, dynamic>> _users = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUsers();
+  }
+
+  Future<void> _loadUsers() async {
+    try {
+      final client = ref.read(dioClientProvider);
+      final res = await client.get(ApiEndpoints.users);
+      setState(() {
+        _users = List<Map<String, dynamic>>.from(res.data['items'] as List);
+      });
+    } catch (_) {}
+  }
 
   @override
   void dispose() {
@@ -811,6 +828,23 @@ class _AddPropertyDialogState extends ConsumerState<_AddPropertyDialog> {
               DropdownMenuItem(value: 'COMMERCIAL',  child: Text('Commercial')),
             ],
             onChanged: (v) => setState(() => _type = v!),
+          ),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<int?>(
+            value: _ownerId,
+            decoration: const InputDecoration(
+              labelText: 'Owner (optional)',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.person_outline),
+            ),
+            items: [
+              const DropdownMenuItem<int?>(value: null, child: Text('No owner')),
+              ..._users.map((u) => DropdownMenuItem<int?>(
+                value: u['user_id'] as int,
+                child: Text('${u['name']} · +91 ${u['mobile']}'),
+              )),
+            ],
+            onChanged: (v) => setState(() => _ownerId = v),
           ),
         ]),
       )),
