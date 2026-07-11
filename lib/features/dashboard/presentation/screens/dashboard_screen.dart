@@ -690,17 +690,22 @@ class _AddPropertyDialogState extends ConsumerState<_AddPropertyDialog> {
   @override
   void initState() {
     super.initState();
-    _loadUsers();
+    // Use addPostFrameCallback so ref is available after first build
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadUsers());
   }
 
   Future<void> _loadUsers() async {
     try {
       final client = ref.read(dioClientProvider);
       final res = await client.get(ApiEndpoints.users);
-      setState(() {
-        _users = List<Map<String, dynamic>>.from(res.data['items'] as List);
-      });
-    } catch (_) {}
+      if (mounted) {
+        setState(() {
+          _users = List<Map<String, dynamic>>.from(res.data['items'] as List);
+        });
+      }
+    } catch (e) {
+      // ignore - owner field just shows empty
+    }
   }
 
   @override
