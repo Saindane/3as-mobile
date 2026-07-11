@@ -11,6 +11,8 @@ import '../../../notices/presentation/screens/notices_screen.dart';
 import '../../../reports/presentation/screens/reports_screen.dart';
 import '../../../settings/presentation/screens/settings_screen.dart';
 import '../providers/dashboard_provider.dart';
+import '../../../../core/network/dio_client.dart';
+import '../../../../core/constants/api_endpoints.dart';
 import '../../../../core/router/app_router.dart';
 import 'admin_dashboard_screen.dart';
 import 'resident_dashboard_screen.dart';
@@ -128,7 +130,7 @@ class _UsersPage extends ConsumerWidget {
               AppBadge(label: '${users.length} total', color: AppColors.primary),
               const SizedBox(width: 8),
               ElevatedButton.icon(
-                onPressed: () {},
+                onPressed: () => _showAddUserDialog(context, ref),
                 icon: const Icon(Icons.person_add_outlined, size: 16),
                 label: const Text('Add user'),
                 style: ElevatedButton.styleFrom(
@@ -146,6 +148,150 @@ class _UsersPage extends ConsumerWidget {
           )),
         ],
       ),
+    );
+  }
+}
+
+void _showAddUserDialog(BuildContext context, WidgetRef ref) {
+  showDialog(
+    context: context,
+    builder: (_) => _AddUserDialog(onSuccess: () {
+      ref.invalidate(usersListProvider);
+    }),
+  );
+}
+
+class _AddUserDialog extends ConsumerStatefulWidget {
+  final VoidCallback onSuccess;
+  const _AddUserDialog({required this.onSuccess});
+
+  @override
+  ConsumerState<_AddUserDialog> createState() => _AddUserDialogState();
+}
+
+class _AddUserDialogState extends ConsumerState<_AddUserDialog> {
+  final _nameCtr     = TextEditingController();
+  final _mobileCtr   = TextEditingController();
+  final _passwordCtr = TextEditingController();
+  String _role       = 'resident';
+  bool   _isLoading  = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _nameCtr.dispose();
+    _mobileCtr.dispose();
+    _passwordCtr.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (_nameCtr.text.trim().isEmpty ||
+        _mobileCtr.text.trim().isEmpty ||
+        _passwordCtr.text.trim().isEmpty) {
+      setState(() => _error = 'Please fill all fields');
+      return;
+    }
+    setState(() { _isLoading = true; _error = null; });
+    try {
+      final client = ref.read(dioClientProvider);
+      await client.post(ApiEndpoints.users, data: {
+        'name':     _nameCtr.text.trim(),
+        'mobile':   _mobileCtr.text.trim(),
+        'password': _passwordCtr.text.trim(),
+        'role':     _role,
+      });
+      if (mounted) {
+        Navigator.pop(context);
+        widget.onSuccess();
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('User created successfully'),
+          backgroundColor: Color(0xFF16A34A),
+        ));
+      }
+    } catch (e) {
+      setState(() { _isLoading = false; _error = e.toString(); });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Add new user',
+          style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+      content: SizedBox(
+        width: 400,
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          if (_error != null)
+            Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEE2E2),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(_error!,
+                  style: const TextStyle(color: Color(0xFFDC2626), fontSize: 13)),
+            ),
+          TextField(
+            controller: _nameCtr,
+            decoration: const InputDecoration(
+              labelText: 'Full name',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.person_outline),
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _mobileCtr,
+            keyboardType: TextInputType.phone,
+            decoration: const InputDecoration(
+              labelText: 'Mobile number',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.phone_outlined),
+              prefixText: '+91 ',
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _passwordCtr,
+            obscureText: true,
+            decoration: const InputDecoration(
+              labelText: 'Password',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.lock_outline),
+            ),
+          ),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<String>(
+            value: _role,
+            decoration: const InputDecoration(
+              labelText: 'Role',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.badge_outlined),
+            ),
+            items: const [
+              DropdownMenuItem(value: 'resident',   child: Text('Resident')),
+              DropdownMenuItem(value: 'management', child: Text('Management')),
+              DropdownMenuItem(value: 'admin',      child: Text('Admin')),
+            ],
+            onChanged: (v) => setState(() => _role = v!),
+          ),
+        ]),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _isLoading ? null : () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: _isLoading ? null : _submit,
+          child: _isLoading
+              ? const SizedBox(width: 16, height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+              : const Text('Create user'),
+        ),
+      ],
     );
   }
 }
