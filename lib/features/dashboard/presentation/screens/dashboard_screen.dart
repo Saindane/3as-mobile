@@ -444,8 +444,8 @@ class _UserCard extends ConsumerWidget {
           builder: (_) => AlertDialog(
             title: Text(isActive ? 'Deactivate user' : 'Activate user'),
             content: Text(isActive
-                ? 'Deactivate \$name? They will not be able to login.'
-                : 'Activate \$name? They will be able to login again.'),
+                ? 'Deactivate $name? They will not be able to login.'
+                : 'Activate $name? They will be able to login again.'),
             actions: [
               TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
               ElevatedButton(
