@@ -4,6 +4,25 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../constants/app_constants.dart';
 import '../constants/api_endpoints.dart';
 
+// ── In-memory token store — fast, reliable, no async read needed ──
+class TokenStore {
+  static String? _accessToken;
+  static String? _refreshToken;
+
+  static void set(String access, String refresh) {
+    _accessToken  = access;
+    _refreshToken = refresh;
+  }
+
+  static String? get accessToken  => _accessToken;
+  static String? get refreshToken => _refreshToken;
+
+  static void clear() {
+    _accessToken  = null;
+    _refreshToken = null;
+  }
+}
+
 final dioClientProvider = Provider<DioClient>((ref) => DioClient());
 
 class DioClient {
@@ -13,50 +32,65 @@ class DioClient {
   DioClient() {
     _dio = Dio(
       BaseOptions(
-        baseUrl: AppConstants.baseUrl, // auto: localhost (web) or 10.0.2.2 (Android)
+        baseUrl:        AppConstants.baseUrl,
         connectTimeout: const Duration(milliseconds: AppConstants.connectTimeout),
         receiveTimeout: const Duration(milliseconds: AppConstants.receiveTimeout),
-        headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept':       'application/json',
+        },
       ),
     );
-
-    _dio.interceptors.addAll([
-      _AuthInterceptor(_storage, _dio),
-    ]);
+    _dio.interceptors.add(_AuthInterceptor(_storage, _dio));
   }
 
   Future<Response> get(String path, {Map<String, dynamic>? queryParameters}) =>
       _dio.get(path, queryParameters: queryParameters);
 
-  Future<Response> post(String path, {dynamic data}) => _dio.post(path, data: data);
+  Future<Response> post(String path, {dynamic data}) =>
+      _dio.post(path, data: data);
 
-  Future<Response> patch(String path, {dynamic data}) => _dio.patch(path, data: data);
+  Future<Response> patch(String path, {dynamic data}) =>
+      _dio.patch(path, data: data);
 
-  Future<Response> delete(String path) => _dio.delete(path);
+  Future<Response> delete(String path) =>
+      _dio.delete(path);
 
   Future<Response> postFormData(String path, FormData data) =>
       _dio.post(path, data: data);
 }
 
-// ── Auth interceptor: attach token + handle 401 refresh ──────────
 class _AuthInterceptor extends Interceptor {
   final FlutterSecureStorage _storage;
   final Dio _dio;
 
   _AuthInterceptor(this._storage, this._dio);
 
+  static const _publicPaths = [
+    '/auth/login',
+    '/auth/refresh',
+    '/auth/otp/send',
+    '/auth/otp/verify',
+    '/auth/password/reset',
+  ];
+
   @override
-  Future<void> onRequest(RequestOptions options, RequestInterceptorHandler handler) async {
-    // Skip auth header for public endpoints
-    final skipAuth = [
-      ApiEndpoints.login,
-      ApiEndpoints.refresh,
-      ApiEndpoints.otpSend,
-      ApiEndpoints.otpVerify,
-      ApiEndpoints.passwordReset,
-    ];
-    if (!skipAuth.any((e) => options.path.contains(e))) {
-      final token = await _storage.read(key: AppConstants.kAccessToken);
+  Future<void> onRequest(
+    RequestOptions options,
+    RequestInterceptorHandler handler,
+  ) async {
+    final isPublic = _publicPaths.any((p) => options.path.endsWith(p));
+    if (!isPublic) {
+      // Use in-memory token first (fast), fall back to storage
+      var token = TokenStore.accessToken;
+      if (token == null) {
+        token = await _storage.read(key: AppConstants.kAccessToken);
+        // Cache it for subsequent requests
+        final refresh = await _storage.read(key: AppConstants.kRefreshToken);
+        if (token != null && refresh != null) {
+          TokenStore.set(token, refresh);
+        }
+      }
       if (token != null) {
         options.headers['Authorization'] = 'Bearer $token';
       }
@@ -65,26 +99,34 @@ class _AuthInterceptor extends Interceptor {
   }
 
   @override
-  Future<void> onError(DioException err, ErrorInterceptorHandler handler) async {
+  Future<void> onError(
+    DioException err,
+    ErrorInterceptorHandler handler,
+  ) async {
     if (err.response?.statusCode == 401) {
-      // Try refreshing token
-      final refreshToken = await _storage.read(key: AppConstants.kRefreshToken);
+      final refreshToken = TokenStore.refreshToken ??
+          await _storage.read(key: AppConstants.kRefreshToken);
+
       if (refreshToken != null) {
         try {
-          final response = await _dio.post(
+          final res = await _dio.post(
             ApiEndpoints.refresh,
             data: {'refresh_token': refreshToken},
           );
-          final newToken = response.data['access_token'];
-          await _storage.write(key: AppConstants.kAccessToken, value: newToken);
+          final newToken  = res.data['access_token'] as String;
+          final newRefresh = res.data['refresh_token'] as String? ?? refreshToken;
 
-          // Retry original request with new token
+          // Update both memory cache and storage
+          TokenStore.set(newToken, newRefresh);
+          await _storage.write(key: AppConstants.kAccessToken,  value: newToken);
+          await _storage.write(key: AppConstants.kRefreshToken, value: newRefresh);
+
+          // Retry original request
           err.requestOptions.headers['Authorization'] = 'Bearer $newToken';
           final retried = await _dio.fetch(err.requestOptions);
           return handler.resolve(retried);
         } catch (_) {
-          // Refresh failed — clear tokens, next API call will get 401
-          // and GoRouter redirect will send user back to /login
+          TokenStore.clear();
           await _storage.deleteAll();
         }
       }

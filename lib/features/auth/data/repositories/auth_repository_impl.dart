@@ -3,6 +3,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/network/dio_client.dart';
+import '../../../core/network/dio_client.dart';
 import '../datasources/auth_remote_datasource.dart';
 
 final authRepositoryProvider = Provider<AuthRepositoryImpl>((ref) {
@@ -58,7 +59,10 @@ class AuthRepositoryImpl {
     return token != null;
   }
 
-  Future<void> logout() => _storage.deleteAll();
+  Future<void> logout() async {
+    TokenStore.clear();
+    await _storage.deleteAll();
+  }
 
   Future<String?> getRole() => _storage.read(key: AppConstants.kUserRole);
   Future<String?> getName() => _storage.read(key: AppConstants.kUserName);
@@ -84,5 +88,7 @@ class AuthRepositoryImpl {
       _storage.write(key: AppConstants.kUserRole,     value: role),
       _storage.write(key: AppConstants.kUserMobile,   value: mobile),
     ]);
+    // Cache token in memory for immediate use — avoids async read race condition
+    TokenStore.set(accessToken, refreshToken);
   }
 }
