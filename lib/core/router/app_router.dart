@@ -34,7 +34,9 @@ class AuthNotifier extends ChangeNotifier {
   /// so ALL providers reload fresh data for the new user
   Future<void> setLoggedIn(bool value) async {
     if (value) {
-      // Bust all provider caches before navigating to dashboard
+      // Small delay ensures TokenStore.setProfile() is fully complete
+      // before providers re-run on sessionKey change
+      await Future.delayed(const Duration(milliseconds: 100));
       _ref.read(sessionKeyProvider.notifier).state++;
     }
     _isLoggedIn = value;
