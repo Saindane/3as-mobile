@@ -371,7 +371,7 @@ class _UserCard extends ConsumerWidget {
         const SizedBox(width: 12),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(name, style: AppTextStyles.bodyBold),
-          Text('+91 \${user['mobile']}', style: AppTextStyles.caption),
+          Text('+91 ${user['mobile']}', style: AppTextStyles.caption),
           if (user['email'] != null)
             Text(user['email'] as String, style: AppTextStyles.caption),
         ])),
@@ -459,12 +459,12 @@ class _UserCard extends ConsumerWidget {
         );
         if (confirm == true && context.mounted) {
           try {
-            await client.patch('\${ApiEndpoints.users}/\$userId',
+            await client.patch('${ApiEndpoints.users}/$userId',
                 data: {'is_active': !isActive});
             ref.invalidate(usersListProvider);
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content: Text('\$name \${isActive ? 'deactivated' : 'activated'}'),
+                content: Text('$name ${isActive ? "deactivated" : "activated"}'),
                 backgroundColor: isActive ? AppColors.warning : AppColors.success,
               ));
             }
@@ -482,7 +482,7 @@ class _UserCard extends ConsumerWidget {
           context: context,
           builder: (_) => AlertDialog(
             title: const Text('Delete user'),
-            content: Text('Delete \$name permanently? This cannot be undone.'),
+            content: Text('Delete $name permanently? This cannot be undone.'),
             actions: [
               TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
               ElevatedButton(
@@ -495,11 +495,11 @@ class _UserCard extends ConsumerWidget {
         );
         if (confirm == true && context.mounted) {
           try {
-            await client.delete('\${ApiEndpoints.users}/\$userId');
+            await client.delete('${ApiEndpoints.users}/$userId');
             ref.invalidate(usersListProvider);
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content: Text('\$name deleted'),
+                content: Text('$name deleted'),
                 backgroundColor: AppColors.error,
               ));
             }
@@ -553,7 +553,7 @@ class _EditUserDialogState extends ConsumerState<_EditUserDialog> {
     try {
       final client = ref.read(dioClientProvider);
       final userId = widget.user['user_id'] as int;
-      await client.patch('\${ApiEndpoints.users}/\$userId', data: {
+      await client.patch('${ApiEndpoints.users}/$userId', data: {
         'name':  _nameCtr.text.trim(),
         'email': _emailCtr.text.trim().isEmpty ? null : _emailCtr.text.trim(),
         'role':  _role.toUpperCase(),
