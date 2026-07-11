@@ -32,7 +32,19 @@ const _residentNav = [
   NavItem(icon: Icons.person_outline,        activeIcon: Icons.person,        label: 'Profile',    index: 5),
 ];
 
-// ── Admin/Mgmt nav: 9 items (index 0–8) ──────────────────────────
+// ── Management nav: 8 items (index 0–7, no Settings) ────────────
+const _managementNav = [
+  NavItem(icon: Icons.dashboard_outlined,    activeIcon: Icons.dashboard,     label: 'Dashboard',   index: 0),
+  NavItem(icon: Icons.people_outline,        activeIcon: Icons.people,        label: 'Users',       index: 1),
+  NavItem(icon: Icons.apartment_outlined,    activeIcon: Icons.apartment,     label: 'Properties',  index: 2),
+  NavItem(icon: Icons.receipt_long_outlined, activeIcon: Icons.receipt_long,  label: 'Billing',     index: 3),
+  NavItem(icon: Icons.verified_outlined,     activeIcon: Icons.verified,      label: 'Payments',    index: 4),
+  NavItem(icon: Icons.build_circle_outlined, activeIcon: Icons.build_circle,  label: 'Complaints',  index: 5),
+  NavItem(icon: Icons.campaign_outlined,     activeIcon: Icons.campaign,      label: 'Notices',     index: 6),
+  NavItem(icon: Icons.bar_chart_outlined,    activeIcon: Icons.bar_chart,     label: 'Reports',     index: 7),
+];
+
+// ── Admin nav: 9 items (index 0–8) ───────────────────────────────
 const _adminNav = [
   NavItem(icon: Icons.dashboard_outlined,    activeIcon: Icons.dashboard,     label: 'Dashboard',   index: 0),
   NavItem(icon: Icons.people_outline,        activeIcon: Icons.people,        label: 'Users',       index: 1),
@@ -67,17 +79,19 @@ class _AppShellState extends ConsumerState<AppShell> {
   int _selectedIndex = 0;
 
   List<NavItem> get _navItems =>
-      widget.isPrivileged ? _adminNav : _residentNav;
+      widget.userRole.toUpperCase() == 'ADMIN' ? _adminNav
+          : widget.isPrivileged ? _managementNav
+          : _residentNav;
 
-  Color get _roleColor => switch (widget.userRole) {
-        'admin'      => AppColors.error,
-        'management' => AppColors.warning,
+  Color get _roleColor => switch (widget.userRole.toUpperCase()) {
+        'ADMIN'      => AppColors.error,
+        'MANAGEMENT' => AppColors.warning,
         _            => AppColors.primary,
       };
 
-  String get _roleLabel => switch (widget.userRole) {
-        'admin'      => 'Administrator',
-        'management' => 'Management',
+  String get _roleLabel => switch (widget.userRole.toUpperCase()) {
+        'ADMIN'      => 'Administrator',
+        'MANAGEMENT' => 'Management',
         _            => 'Resident',
       };
 

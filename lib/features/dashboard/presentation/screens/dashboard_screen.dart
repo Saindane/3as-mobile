@@ -43,6 +43,7 @@ class DashboardScreen extends ConsumerWidget {
         final isPrivileged = profile.role == 'ADMIN' || profile.role == 'MANAGEMENT';
 
         // Build pages list — index matches NavItem.index in AppShell
+        final isAdmin = profile.role == 'ADMIN';
         final pages = isPrivileged
             ? [
                 const AdminDashboardScreen(),              // 0 - Dashboard
@@ -53,7 +54,7 @@ class DashboardScreen extends ConsumerWidget {
                 const ComplaintsScreen(isAdmin: true),     // 5 - Complaints
                 const NoticesScreen(isAdmin: true),        // 6 - Notices
                 const ReportsScreen(),                     // 7 - Reports
-                const SettingsScreen(),                    // 8 - Settings
+                if (isAdmin) const SettingsScreen(),       // 8 - Settings (Admin only)
               ]
             : [
                 const ResidentDashboardScreen(),         // 0 - Home
