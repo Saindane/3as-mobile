@@ -30,7 +30,7 @@ class AdminDashboardScreen extends ConsumerWidget {
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: profile.role == 'admin'
+                  colors: profile.role == 'ADMIN'
                       ? [const Color(0xFF7C3AED), const Color(0xFF4C1D95)]
                       : [AppColors.warning, const Color(0xFF92400E)],
                   begin: Alignment.topLeft, end: Alignment.bottomRight,
@@ -47,7 +47,7 @@ class AdminDashboardScreen extends ConsumerWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                     decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(20)),
                     child: Text(
-                      profile.role == 'admin' ? 'Administrator' : 'Management Committee',
+                      profile.role == 'ADMIN' ? 'Administrator' : 'Management Committee',
                       style: AppTextStyles.caption.copyWith(color: Colors.white),
                     ),
                   ),

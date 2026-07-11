@@ -40,7 +40,7 @@ class DashboardScreen extends ConsumerWidget {
         ]),
       ))),
       data: (profile) {
-        final isPrivileged = profile.role == 'admin' || profile.role == 'management';
+        final isPrivileged = profile.role == 'ADMIN' || profile.role == 'MANAGEMENT';
 
         // Build pages list — index matches NavItem.index in AppShell
         final pages = isPrivileged
@@ -157,8 +157,8 @@ class _UserCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final role   = user['role'] as String;
     final active = user['is_active'] as bool;
-    final color  = role == 'admin' ? AppColors.error
-                 : role == 'management' ? AppColors.warning
+    final color  = role == 'ADMIN' ? AppColors.error
+                 : role == 'MANAGEMENT' ? AppColors.warning
                  : AppColors.primary;
     return AppCard(
       padding: const EdgeInsets.all(14),
@@ -289,8 +289,8 @@ class ProfileScreen extends ConsumerWidget {
       loading: () => const Center(child: CircularProgressIndicator()),
       error:   (e, _) => Center(child: Text('Error: $e')),
       data: (profile) {
-        final roleColor = profile.role == 'admin' ? AppColors.error
-            : profile.role == 'management' ? AppColors.warning : AppColors.primary;
+        final roleColor = profile.role == 'ADMIN' ? AppColors.error
+            : profile.role == 'MANAGEMENT' ? AppColors.warning : AppColors.primary;
         final roleLabel = profile.role[0].toUpperCase() + profile.role.substring(1);
 
         return ListView(padding: const EdgeInsets.all(20), children: [

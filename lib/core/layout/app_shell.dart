@@ -330,9 +330,9 @@ class _RoleSwitcher extends StatelessWidget {
       decoration: BoxDecoration(
           color: AppColors.slate100, borderRadius: BorderRadius.circular(8)),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
-        _RoleBtn(label: 'Resident',   active: currentRole == 'resident'),
-        _RoleBtn(label: 'Management', active: currentRole == 'management'),
-        _RoleBtn(label: 'Admin',      active: currentRole == 'admin'),
+        _RoleBtn(label: 'Resident',   active: currentRole == 'RESIDENT'),
+        _RoleBtn(label: 'Management', active: currentRole == 'MANAGEMENT'),
+        _RoleBtn(label: 'Admin',      active: currentRole == 'ADMIN'),
       ]),
     );
   }

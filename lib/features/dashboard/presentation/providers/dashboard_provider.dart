@@ -12,7 +12,7 @@ final dashboardStatsProvider = FutureProvider<DashboardStats>((ref) async {
   try {
     final profile = await ref.watch(userProfileProvider.future);
     // Only fetch stats for admin/management — residents get empty stats
-    if (profile.role == 'resident') {
+    if (profile.role == 'RESIDENT') {
       return DashboardStats.empty();
     }
     return ref.watch(dashboardRepositoryProvider).getStats();
