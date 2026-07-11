@@ -19,13 +19,24 @@ class AuthRepositoryImpl {
   // ── Login ──────────────────────────────────────────────
   Future<void> login({required String mobile, required String password}) async {
     final model = await _remote.login(mobile: mobile, password: password);
-    await _persistSession(
-      accessToken:  model.accessToken,
-      refreshToken: model.refreshToken,
-      userId:       model.userId,
-      name:         model.name,
-      role:         model.role,
-      mobile:       mobile,
+
+    // Save to storage
+    await Future.wait([
+      _storage.write(key: AppConstants.kAccessToken,  value: model.accessToken),
+      _storage.write(key: AppConstants.kRefreshToken, value: model.refreshToken),
+      _storage.write(key: AppConstants.kUserId,       value: model.userId.toString()),
+      _storage.write(key: AppConstants.kUserName,     value: model.name),
+      _storage.write(key: AppConstants.kUserRole,     value: model.role),
+      _storage.write(key: AppConstants.kUserMobile,   value: mobile),
+    ]);
+
+    // Cache token + profile in memory for immediate use
+    TokenStore.set(model.accessToken, model.refreshToken);
+    TokenStore.setProfile(
+      id:         model.userId,
+      userName:   model.name,
+      userRole:   model.role,
+      userMobile: mobile,
     );
   }
 
@@ -52,42 +63,12 @@ class AuthRepositoryImpl {
     required String newPassword,
   }) => _remote.resetPassword(mobile: mobile, resetToken: resetToken, newPassword: newPassword);
 
-  // ── Session ────────────────────────────────────────────
-  Future<bool> isLoggedIn() async {
-    final token = await _storage.read(key: AppConstants.kAccessToken);
-    return token != null;
-  }
-
+  // ── Logout ─────────────────────────────────────────────
   Future<void> logout() async {
     TokenStore.clear();
     await _storage.deleteAll();
   }
 
-  Future<String?> getRole() => _storage.read(key: AppConstants.kUserRole);
-  Future<String?> getName() => _storage.read(key: AppConstants.kUserName);
-  Future<String?> getUserId() => _storage.read(key: AppConstants.kUserId);
-
   // ── FCM ────────────────────────────────────────────────
   Future<void> updateFcmToken(String token) => _remote.updateFcmToken(token);
-
-  // ── Private ────────────────────────────────────────────
-  Future<void> _persistSession({
-    required String accessToken,
-    required String refreshToken,
-    required int userId,
-    required String name,
-    required String role,
-    required String mobile,
-  }) async {
-    await Future.wait([
-      _storage.write(key: AppConstants.kAccessToken,  value: accessToken),
-      _storage.write(key: AppConstants.kRefreshToken, value: refreshToken),
-      _storage.write(key: AppConstants.kUserId,       value: userId.toString()),
-      _storage.write(key: AppConstants.kUserName,     value: name),
-      _storage.write(key: AppConstants.kUserRole,     value: role),
-      _storage.write(key: AppConstants.kUserMobile,   value: mobile),
-    ]);
-    // Cache token in memory for immediate use — avoids async read race condition
-    TokenStore.set(accessToken, refreshToken);
-  }
 }

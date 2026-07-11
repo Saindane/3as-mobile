@@ -8,23 +8,42 @@ import '../models/dashboard_model.dart';
 
 class DashboardRemoteDatasource {
   final DioClient _client;
-  final FlutterSecureStorage _storage;
+  final _storage = const FlutterSecureStorage();
 
-  DashboardRemoteDatasource(this._client)
-      : _storage = const FlutterSecureStorage();
+  DashboardRemoteDatasource(this._client);
 
-  /// Build UserProfile from stored login data — no extra API call needed
+  /// Build UserProfile from TokenStore (set during login) — no API call, no storage read
   Future<UserProfile> getMe() async {
     try {
-      // Read from storage — saved during login
-      final userId   = await _storage.read(key: AppConstants.kUserId);
-      final name     = await _storage.read(key: AppConstants.kUserName);
-      final role     = await _storage.read(key: AppConstants.kUserRole);
-      final mobile   = await _storage.read(key: AppConstants.kUserMobile);
+      // First try in-memory cache (set during login — always available)
+      if (TokenStore.hasProfile) {
+        return UserProfile(
+          userId:   TokenStore.userId!,
+          name:     TokenStore.name!,
+          mobile:   TokenStore.mobile ?? '',
+          email:    null,
+          role:     TokenStore.role!,
+          isActive: true,
+        );
+      }
+
+      // Fallback: read from storage (app restart case)
+      final userId = await _storage.read(key: AppConstants.kUserId);
+      final name   = await _storage.read(key: AppConstants.kUserName);
+      final role   = await _storage.read(key: AppConstants.kUserRole);
+      final mobile = await _storage.read(key: AppConstants.kUserMobile);
 
       if (userId == null || name == null || role == null) {
         throw ApiException(message: 'Session expired. Please login again.');
       }
+
+      // Populate TokenStore for future calls
+      TokenStore.setProfile(
+        id:         int.parse(userId),
+        userName:   name,
+        userRole:   role,
+        userMobile: mobile ?? '',
+      );
 
       return UserProfile(
         userId:   int.parse(userId),
@@ -58,7 +77,7 @@ class DashboardRemoteDatasource {
       return PropertyInfo.fromJson(res.data as Map<String, dynamic>);
     } on DioException catch (e) {
       throw ApiException.fromDioException(e);
-    } catch (e) {
+    } catch (_) {
       return null;
     }
   }
