@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/layout/app_shell.dart';
@@ -11,6 +12,8 @@ import '../../../notices/presentation/screens/notices_screen.dart';
 import '../../../reports/presentation/screens/reports_screen.dart';
 import '../../../settings/presentation/screens/settings_screen.dart';
 import '../providers/dashboard_provider.dart';
+import '../../../../core/network/dio_client.dart';
+import '../../../../core/constants/api_endpoints.dart';
 import '../../../../core/router/app_router.dart';
 import 'admin_dashboard_screen.dart';
 import 'resident_dashboard_screen.dart';
@@ -49,7 +52,7 @@ class DashboardScreen extends ConsumerWidget {
                 const AdminDashboardScreen(),              // 0 - Dashboard
                 const _UsersPage(),                        // 1 - Users
                 const _PropertiesPage(),                   // 2 - Properties
-                const BillsScreen(isAdmin: true),          // 3 - Billing
+                BillsScreen(isAdmin: isAdmin),             // 3 - Billing (Generate hidden for mgmt)
                 const PaymentsScreen(isAdmin: true),       // 4 - Payments
                 const ComplaintsScreen(isAdmin: true),     // 5 - Complaints
                 const NoticesScreen(isAdmin: true),        // 6 - Notices
@@ -127,16 +130,18 @@ class _UsersPage extends ConsumerWidget {
             Row(children: [
               AppBadge(label: '${users.length} total', color: AppColors.primary),
               const SizedBox(width: 8),
-              ElevatedButton.icon(
-                onPressed: () {},
-                icon: const Icon(Icons.person_add_outlined, size: 16),
-                label: const Text('Add user'),
-                style: ElevatedButton.styleFrom(
-                  minimumSize: Size.zero,
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                  textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+              // Only admin can add users
+              if (TokenStore.role?.toUpperCase() == 'ADMIN')
+                ElevatedButton.icon(
+                  onPressed: () => _showAddUserDialog(context, ref),
+                  icon: const Icon(Icons.person_add_outlined, size: 16),
+                  label: const Text('Add user'),
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: Size.zero,
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                  ),
                 ),
-              ),
             ]),
           ]),
           const SizedBox(height: 16),
@@ -150,28 +155,224 @@ class _UsersPage extends ConsumerWidget {
   }
 }
 
-class _UserCard extends StatelessWidget {
+void _showAddUserDialog(BuildContext context, WidgetRef ref) {
+  showDialog(
+    context: context,
+    builder: (_) => _AddUserDialog(onSuccess: () {
+      ref.invalidate(usersListProvider);
+    }),
+  );
+}
+
+class _AddUserDialog extends ConsumerStatefulWidget {
+  final VoidCallback onSuccess;
+  const _AddUserDialog({required this.onSuccess});
+
+  @override
+  ConsumerState<_AddUserDialog> createState() => _AddUserDialogState();
+}
+
+class _AddUserDialogState extends ConsumerState<_AddUserDialog> {
+  final _nameCtr     = TextEditingController();
+  final _mobileCtr   = TextEditingController();
+  final _emailCtr    = TextEditingController();
+  final _passwordCtr = TextEditingController();
+  String _role       = 'resident';
+  bool   _isLoading  = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _nameCtr.dispose();
+    _mobileCtr.dispose();
+    _emailCtr.dispose();
+    _passwordCtr.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (_nameCtr.text.trim().isEmpty ||
+        _mobileCtr.text.trim().isEmpty ||
+        _passwordCtr.text.trim().isEmpty) {
+      setState(() => _error = 'Please fill all fields');
+      return;
+    }
+    setState(() { _isLoading = true; _error = null; });
+    try {
+      final client = ref.read(dioClientProvider);
+      await client.post(ApiEndpoints.users, data: {
+        'name':     _nameCtr.text.trim(),
+        'mobile':   _mobileCtr.text.trim(),
+        'email':    _emailCtr.text.trim().isEmpty ? null : _emailCtr.text.trim(),
+        'password': _passwordCtr.text.trim(),
+        'role':     _role.toUpperCase(),
+      });
+      if (mounted) {
+        // Invalidate using dialog's own ref — more reliable than callback
+        ref.invalidate(usersListProvider);
+        // Small delay to let provider refresh before closing
+        await Future.delayed(const Duration(milliseconds: 300));
+        Navigator.pop(context);
+        widget.onSuccess();
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('User created successfully'),
+          backgroundColor: Color(0xFF16A34A),
+        ));
+      }
+    } on DioException catch (e) {
+      String msg = 'Something went wrong';
+      try {
+        final data = e.response?.data;
+        if (data is Map && data['detail'] is List) {
+          // Pydantic validation error — extract messages
+          final errors = data['detail'] as List;
+          msg = errors.map((err) {
+            final field = (err['loc'] as List).last.toString();
+            final message = err['msg'].toString().replaceAll('Value error, ', '');
+            return '$field: $message';
+          }).join(', ');
+        } else if (data is Map && data['detail'] is String) {
+          msg = data['detail'];
+        } else {
+          msg = 'Error ${e.response?.statusCode}';
+        }
+      } catch (_) {
+        msg = e.message ?? 'Request failed';
+      }
+      setState(() { _isLoading = false; _error = msg; });
+    } catch (e) {
+      setState(() { _isLoading = false; _error = e.toString(); });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Add new user',
+          style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+      content: SizedBox(
+        width: 400,
+        child: SingleChildScrollView(
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+          if (_error != null)
+            Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEE2E2),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFDC2626).withOpacity(.3)),
+              ),
+              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Icon(Icons.error_outline, color: Color(0xFFDC2626), size: 18),
+                const SizedBox(width: 8),
+                Expanded(child: Text(_error!,
+                    style: const TextStyle(
+                      color: Color(0xFFDC2626),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ))),
+              ]),
+            ),
+          TextField(
+            controller: _nameCtr,
+            decoration: const InputDecoration(
+              labelText: 'Full name',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.person_outline),
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _mobileCtr,
+            keyboardType: TextInputType.phone,
+            decoration: const InputDecoration(
+              labelText: 'Mobile number',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.phone_outlined),
+              prefixText: '+91 ',
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _emailCtr,
+            keyboardType: TextInputType.emailAddress,
+            decoration: const InputDecoration(
+              labelText: 'Email (optional)',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.email_outlined),
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _passwordCtr,
+            obscureText: true,
+            decoration: const InputDecoration(
+              labelText: 'Password',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.lock_outline),
+            ),
+          ),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<String>(
+            value: _role,
+            decoration: const InputDecoration(
+              labelText: 'Role',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.badge_outlined),
+            ),
+            items: const [
+              DropdownMenuItem(value: 'resident',   child: Text('Resident')),
+              DropdownMenuItem(value: 'management', child: Text('Management')),
+              DropdownMenuItem(value: 'admin',      child: Text('Admin')),
+            ],
+            onChanged: (v) => setState(() => _role = v!),
+          ),
+        ]),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _isLoading ? null : () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: _isLoading ? null : _submit,
+          child: _isLoading
+              ? const SizedBox(width: 16, height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+              : const Text('Create user'),
+        ),
+      ],
+    );
+  }
+}
+
+class _UserCard extends ConsumerWidget {
   final Map<String, dynamic> user;
   const _UserCard(this.user);
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final role   = user['role'] as String;
     final active = user['is_active'] as bool;
+    final userId = user['user_id'] as int;
+    final name   = user['name'] as String;
     final color  = role == 'ADMIN' ? AppColors.error
                  : role == 'MANAGEMENT' ? AppColors.warning
                  : AppColors.primary;
+
     return AppCard(
       padding: const EdgeInsets.all(14),
       child: Row(children: [
         CircleAvatar(
           radius: 20, backgroundColor: color.withOpacity(.12),
-          child: Text((user['name'] as String)[0].toUpperCase(),
+          child: Text(name[0].toUpperCase(),
               style: TextStyle(color: color, fontWeight: FontWeight.w700)),
         ),
         const SizedBox(width: 12),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(user['name'] as String, style: AppTextStyles.bodyBold),
+          Text(name, style: AppTextStyles.bodyBold),
           Text('+91 ${user['mobile']}', style: AppTextStyles.caption),
           if (user['email'] != null)
             Text(user['email'] as String, style: AppTextStyles.caption),
@@ -186,13 +387,239 @@ class _UserCard extends StatelessWidget {
           ),
         ]),
         const SizedBox(width: 8),
-        IconButton(
+        // ── 3-dot menu ──────────────────────────────────
+        PopupMenuButton<String>(
           icon: const Icon(Icons.more_vert, size: 18, color: AppColors.textMuted),
-          onPressed: () {},
+          onSelected: (action) => _handleAction(context, ref, action, userId, name, active, role),
+          itemBuilder: (_) => [
+            const PopupMenuItem(
+              value: 'edit',
+              child: Row(children: [
+                Icon(Icons.edit_outlined, size: 16, color: AppColors.primary),
+                SizedBox(width: 8),
+                Text('Edit'),
+              ]),
+            ),
+            PopupMenuItem(
+              value: 'toggle',
+              child: Row(children: [
+                Icon(active ? Icons.block_outlined : Icons.check_circle_outline,
+                    size: 16, color: active ? AppColors.warning : AppColors.success),
+                const SizedBox(width: 8),
+                Text(active ? 'Deactivate' : 'Activate'),
+              ]),
+            ),
+            // Delete only available for admin
+            if (TokenStore.role?.toUpperCase() == 'ADMIN')
+              const PopupMenuItem(
+                value: 'delete',
+                child: Row(children: [
+                  Icon(Icons.delete_outline, size: 16, color: AppColors.error),
+                  SizedBox(width: 8),
+                  Text('Delete', style: TextStyle(color: AppColors.error)),
+                ]),
+              ),
+          ],
         ),
       ]),
     );
   }
+
+  Future<void> _handleAction(BuildContext context, WidgetRef ref,
+      String action, int userId, String name, bool isActive, String role) async {
+    final client = ref.read(dioClientProvider);
+    switch (action) {
+
+      case 'edit':
+        showDialog(
+          context: context,
+          builder: (_) => _EditUserDialog(
+            user: user,
+            onSuccess: () => ref.invalidate(usersListProvider),
+          ),
+        );
+        break;
+
+      case 'toggle':
+        final confirm = await showDialog<bool>(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: Text(isActive ? 'Deactivate user' : 'Activate user'),
+            content: Text(isActive
+                ? 'Deactivate $name? They will not be able to login.'
+                : 'Activate $name? They will be able to login again.'),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: isActive ? AppColors.warning : AppColors.success),
+                child: Text(isActive ? 'Deactivate' : 'Activate'),
+              ),
+            ],
+          ),
+        );
+        if (confirm == true && context.mounted) {
+          try {
+            await client.patch('${ApiEndpoints.users}/$userId',
+                data: {'is_active': !isActive});
+            ref.invalidate(usersListProvider);
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text('$name ${isActive ? "deactivated" : "activated"}'),
+                backgroundColor: isActive ? AppColors.warning : AppColors.success,
+              ));
+            }
+          } catch (e) {
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text('Error: \$e'), backgroundColor: AppColors.error));
+            }
+          }
+        }
+        break;
+
+      case 'delete':
+        final confirm = await showDialog<bool>(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: const Text('Delete user'),
+            content: Text('Delete $name permanently? This cannot be undone.'),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+                child: const Text('Delete'),
+              ),
+            ],
+          ),
+        );
+        if (confirm == true && context.mounted) {
+          try {
+            await client.delete('${ApiEndpoints.users}/$userId');
+            ref.invalidate(usersListProvider);
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text('$name deleted'),
+                backgroundColor: AppColors.error,
+              ));
+            }
+          } catch (e) {
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text('Error: \$e'), backgroundColor: AppColors.error));
+            }
+          }
+        }
+        break;
+    }
+  }
+}
+
+// ── Edit User Dialog ──────────────────────────────────────────────
+class _EditUserDialog extends ConsumerStatefulWidget {
+  final Map<String, dynamic> user;
+  final VoidCallback onSuccess;
+  const _EditUserDialog({required this.user, required this.onSuccess});
+
+  @override
+  ConsumerState<_EditUserDialog> createState() => _EditUserDialogState();
+}
+
+class _EditUserDialogState extends ConsumerState<_EditUserDialog> {
+  late final TextEditingController _nameCtr;
+  late final TextEditingController _emailCtr;
+  late String _role;
+  bool _isLoading = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameCtr  = TextEditingController(text: widget.user['name'] as String);
+    _emailCtr = TextEditingController(text: widget.user['email'] as String? ?? '');
+    _role     = (widget.user['role'] as String).toLowerCase();
+    if (!['resident','management','admin'].contains(_role)) _role = 'resident';
+  }
+
+  @override
+  void dispose() { _nameCtr.dispose(); _emailCtr.dispose(); super.dispose(); }
+
+  Future<void> _submit() async {
+    if (_nameCtr.text.trim().isEmpty) {
+      setState(() => _error = 'Name is required');
+      return;
+    }
+    setState(() { _isLoading = true; _error = null; });
+    try {
+      final client = ref.read(dioClientProvider);
+      final userId = widget.user['user_id'] as int;
+      await client.patch('${ApiEndpoints.users}/$userId', data: {
+        'name':  _nameCtr.text.trim(),
+        'email': _emailCtr.text.trim().isEmpty ? null : _emailCtr.text.trim(),
+        'role':  _role.toUpperCase(),
+      });
+      if (mounted) {
+        Navigator.pop(context);
+        widget.onSuccess();
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('User updated successfully'),
+          backgroundColor: AppColors.success,
+        ));
+      }
+    } catch (e) {
+      setState(() { _isLoading = false; _error = e.toString(); });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: const Text('Edit user',
+        style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+    content: SizedBox(width: 400, child: SingleChildScrollView(
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        if (_error != null)
+          Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(color: const Color(0xFFFEE2E2),
+                borderRadius: BorderRadius.circular(8)),
+            child: Text(_error!, style: const TextStyle(color: Color(0xFFDC2626))),
+          ),
+        TextField(controller: _nameCtr,
+            decoration: const InputDecoration(labelText: 'Full name',
+                border: OutlineInputBorder(), prefixIcon: Icon(Icons.person_outline))),
+        const SizedBox(height: 12),
+        TextField(controller: _emailCtr, keyboardType: TextInputType.emailAddress,
+            decoration: const InputDecoration(labelText: 'Email (optional)',
+                border: OutlineInputBorder(), prefixIcon: Icon(Icons.email_outlined))),
+        const SizedBox(height: 12),
+        DropdownButtonFormField<String>(
+          value: _role,
+          decoration: const InputDecoration(labelText: 'Role',
+              border: OutlineInputBorder(), prefixIcon: Icon(Icons.badge_outlined)),
+          items: const [
+            DropdownMenuItem(value: 'resident',   child: Text('Resident')),
+            DropdownMenuItem(value: 'management', child: Text('Management')),
+            DropdownMenuItem(value: 'admin',      child: Text('Admin')),
+          ],
+          onChanged: (v) => setState(() => _role = v!),
+        ),
+      ]),
+    )),
+    actions: [
+      TextButton(onPressed: _isLoading ? null : () => Navigator.pop(context),
+          child: const Text('Cancel')),
+      ElevatedButton(
+        onPressed: _isLoading ? null : _submit,
+        child: _isLoading
+            ? const SizedBox(width: 16, height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+            : const Text('Save changes'),
+      ),
+    ],
+  );
 }
 
 // ── Properties page ───────────────────────────────────────────────
@@ -213,7 +640,7 @@ class _PropertiesPage extends ConsumerWidget {
               AppBadge(label: '${props.length} units', color: AppColors.primary),
               const SizedBox(width: 8),
               ElevatedButton.icon(
-                onPressed: () {},
+                onPressed: () => _showAddPropertyDialog(context, ref),
                 icon: const Icon(Icons.add_home_outlined, size: 16),
                 label: const Text('Add unit'),
                 style: ElevatedButton.styleFrom(
@@ -235,25 +662,239 @@ class _PropertiesPage extends ConsumerWidget {
   }
 }
 
-class _PropertyCard extends StatelessWidget {
+void _showAddPropertyDialog(BuildContext context, WidgetRef ref) {
+  showDialog(
+    context: context,
+    builder: (_) => _AddPropertyDialog(
+      onSuccess: () => ref.invalidate(propertiesListProvider),
+    ),
+  );
+}
+
+class _AddPropertyDialog extends ConsumerStatefulWidget {
+  final VoidCallback onSuccess;
+  const _AddPropertyDialog({required this.onSuccess});
+
+  @override
+  ConsumerState<_AddPropertyDialog> createState() => _AddPropertyDialogState();
+}
+
+class _AddPropertyDialogState extends ConsumerState<_AddPropertyDialog> {
+  final _unitNoCtr   = TextEditingController();
+  final _floorCtr    = TextEditingController();
+  final _areaCtr     = TextEditingController();
+  String  _type      = 'RESIDENTIAL';
+  int?    _ownerId;
+  bool    _isLoading = false;
+  String? _error;
+  List<Map<String, dynamic>> _users = [];
+
+  @override
+  void initState() {
+    super.initState();
+    // Use addPostFrameCallback so ref is available after first build
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadUsers());
+  }
+
+  Future<void> _loadUsers() async {
+    try {
+      final client = ref.read(dioClientProvider);
+      final res = await client.get(ApiEndpoints.users);
+      if (mounted) {
+        setState(() {
+          _users = List<Map<String, dynamic>>.from(res.data['items'] as List);
+        });
+      }
+    } catch (e) {
+      // ignore - owner field just shows empty
+    }
+  }
+
+  @override
+  void dispose() {
+    _unitNoCtr.dispose();
+    _floorCtr.dispose();
+    _areaCtr.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (_unitNoCtr.text.trim().isEmpty || _floorCtr.text.trim().isEmpty) {
+      setState(() => _error = 'Unit no and floor are required');
+      return;
+    }
+    final floor = int.tryParse(_floorCtr.text.trim());
+    if (floor == null) {
+      setState(() => _error = 'Floor must be a number');
+      return;
+    }
+    setState(() { _isLoading = true; _error = null; });
+    try {
+      final client = ref.read(dioClientProvider);
+      await client.post(ApiEndpoints.properties, data: {
+        'unit_no':   _unitNoCtr.text.trim().toUpperCase(),
+        'floor':     floor,
+        'type':      _type.toLowerCase(),
+        'area_sqft': _areaCtr.text.trim().isEmpty
+            ? null : double.tryParse(_areaCtr.text.trim()),
+        if (_ownerId != null) 'owner_id': _ownerId,
+      });
+      if (mounted) {
+        ref.invalidate(propertiesListProvider);
+        await Future.delayed(const Duration(milliseconds: 300));
+        Navigator.pop(context);
+        widget.onSuccess();
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Property added successfully'),
+          backgroundColor: Color(0xFF16A34A),
+        ));
+      }
+    } on DioException catch (e) {
+      String msg = 'Something went wrong';
+      try {
+        final data = e.response?.data;
+        if (data is Map && data['detail'] is String) {
+          msg = data['detail'];
+        } else if (data is Map && data['detail'] is List) {
+          final errors = data['detail'] as List;
+          msg = errors.map((err) {
+            final field = (err['loc'] as List).last.toString();
+            final message = err['msg'].toString().replaceAll('Value error, ', '');
+            return '$field: $message';
+          }).join(', ');
+        }
+      } catch (_) {}
+      setState(() { _isLoading = false; _error = msg; });
+    } catch (e) {
+      setState(() { _isLoading = false; _error = e.toString(); });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Add new unit',
+          style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+      content: SizedBox(width: 400, child: SingleChildScrollView(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          if (_error != null)
+            Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEE2E2),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFDC2626).withOpacity(.3)),
+              ),
+              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Icon(Icons.error_outline, color: Color(0xFFDC2626), size: 18),
+                const SizedBox(width: 8),
+                Expanded(child: Text(_error!,
+                    style: const TextStyle(color: Color(0xFFDC2626), fontSize: 13))),
+              ]),
+            ),
+          TextField(
+            controller: _unitNoCtr,
+            textCapitalization: TextCapitalization.characters,
+            decoration: const InputDecoration(
+              labelText: 'Unit number (e.g. 4B)',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.apartment_outlined),
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _floorCtr,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(
+              labelText: 'Floor number',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.layers_outlined),
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _areaCtr,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: const InputDecoration(
+              labelText: 'Area in sq ft (optional)',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.square_foot_outlined),
+            ),
+          ),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<String>(
+            value: _type,
+            decoration: const InputDecoration(
+              labelText: 'Type',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.home_work_outlined),
+            ),
+            items: const [
+              DropdownMenuItem(value: 'RESIDENTIAL', child: Text('Residential')),
+              DropdownMenuItem(value: 'COMMERCIAL',  child: Text('Commercial')),
+            ],
+            onChanged: (v) => setState(() => _type = v!),
+          ),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<int?>(
+            value: _ownerId,
+            decoration: const InputDecoration(
+              labelText: 'Owner (optional)',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.person_outline),
+            ),
+            items: [
+              const DropdownMenuItem<int?>(value: null, child: Text('No owner')),
+              ..._users.map((u) => DropdownMenuItem<int?>(
+                value: u['user_id'] as int,
+                child: Text('${u['name']} · +91 ${u['mobile']}'),
+              )),
+            ],
+            onChanged: (v) => setState(() => _ownerId = v),
+          ),
+        ]),
+      )),
+      actions: [
+        TextButton(
+          onPressed: _isLoading ? null : () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: _isLoading ? null : _submit,
+          child: _isLoading
+              ? const SizedBox(width: 16, height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+              : const Text('Add unit'),
+        ),
+      ],
+    );
+  }
+}
+
+class _PropertyCard extends ConsumerWidget {
   final Map<String, dynamic> prop;
   const _PropertyCard(this.prop);
 
   @override
-  Widget build(BuildContext context) {
-    final owner = prop['owner'] as Map<String, dynamic>?;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final owner      = prop['owner']       as Map<String, dynamic>?;
+    final propertyId = prop['property_id'] as int;
+    final unitNo     = prop['unit_no']     as String;
+
     return AppCard(
       padding: const EdgeInsets.all(14),
       child: Row(children: [
         Container(
           width: 44, height: 44,
           decoration: BoxDecoration(
-            color: AppColors.primaryLight, borderRadius: BorderRadius.circular(10)),
+            color: AppColors.primaryLight,
+            borderRadius: BorderRadius.circular(10)),
           child: const Icon(Icons.apartment, color: AppColors.primary, size: 22),
         ),
         const SizedBox(width: 14),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Unit ${prop['unit_no']}', style: AppTextStyles.bodyBold),
+          Text('Unit $unitNo', style: AppTextStyles.bodyBold),
           Text('Floor ${prop['floor']}'
               '${prop['area_sqft'] != null ? ' · ${prop['area_sqft']} sq ft' : ''}',
               style: AppTextStyles.caption),
@@ -263,19 +904,73 @@ class _PropertyCard extends StatelessWidget {
         ])),
         Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
           AppBadge(
-            label: (prop['type'] as String? ?? 'residential').toUpperCase(),
+            label: (prop['type'] as String? ?? 'RESIDENTIAL').toUpperCase(),
             color: AppColors.primary,
           ),
         ]),
         const SizedBox(width: 8),
-        IconButton(
+        PopupMenuButton<String>(
           icon: const Icon(Icons.more_vert, size: 18, color: AppColors.textMuted),
-          onPressed: () {},
+          onSelected: (action) => _handleAction(context, ref, action, propertyId, unitNo),
+          itemBuilder: (_) => [
+            const PopupMenuItem(
+              value: 'delete',
+              child: Row(children: [
+                Icon(Icons.delete_outline, size: 16, color: AppColors.error),
+                SizedBox(width: 8),
+                Text('Delete', style: TextStyle(color: AppColors.error)),
+              ]),
+            ),
+          ],
         ),
       ]),
     );
   }
+
+  Future<void> _handleAction(BuildContext context, WidgetRef ref,
+      String action, int propertyId, String unitNo) async {
+    if (action != 'delete') return;
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Delete unit'),
+        content: Text('Delete Unit $unitNo permanently? This cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirm == true && context.mounted) {
+      try {
+        await ref.read(dioClientProvider).delete(
+            '${ApiEndpoints.properties}/$propertyId');
+        ref.invalidate(propertiesListProvider);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Unit $unitNo deleted'),
+            backgroundColor: AppColors.error,
+          ));
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: AppColors.error,
+          ));
+        }
+      }
+    }
+  }
 }
+
 
 // ── Profile screen (exported for use in shell) ────────────────────
 class ProfileScreen extends ConsumerWidget {

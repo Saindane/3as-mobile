@@ -43,19 +43,21 @@ class _ComplaintsScreenState extends ConsumerState<ComplaintsScreen>
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
               Text('Complaints', style: AppTextStyles.heading2),
-              ElevatedButton.icon(
-                onPressed: () async {
-                  await Navigator.push(context, MaterialPageRoute(
-                      builder: (_) => const RaiseComplaintScreen()));
-                  ref.invalidate(complaintsProvider);
-                },
-                icon: const Icon(Icons.add, size: 16),
-                label: const Text('Raise'),
-                style: ElevatedButton.styleFrom(
-                  minimumSize: Size.zero,
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              // Only residents can raise complaints
+              if (!widget.isAdmin)
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    await Navigator.push(context, MaterialPageRoute(
+                        builder: (_) => const RaiseComplaintScreen()));
+                    ref.invalidate(complaintsProvider);
+                  },
+                  icon: const Icon(Icons.add, size: 16),
+                  label: const Text('Raise'),
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: Size.zero,
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  ),
                 ),
-              ),
             ]),
             const SizedBox(height: 12),
             TabBar(
@@ -73,8 +75,8 @@ class _ComplaintsScreenState extends ConsumerState<ComplaintsScreen>
             controller: _tabs,
             children: [
               _ComplaintList(filter: null,       isAdmin: widget.isAdmin),
-              _ComplaintList(filter: 'open',     isAdmin: widget.isAdmin),
-              _ComplaintList(filter: 'resolved', isAdmin: widget.isAdmin),
+              _ComplaintList(filter: 'OPEN',     isAdmin: widget.isAdmin),
+              _ComplaintList(filter: 'RESOLVED', isAdmin: widget.isAdmin),
             ],
           ),
         ),
@@ -145,20 +147,20 @@ class ComplaintCard extends ConsumerWidget {
       };
 
   Color get _statusColor => switch (complaint.status) {
-        'new'         => AppColors.primary,
-        'assigned'    => AppColors.warning,
-        'in_progress' => AppColors.warning,
-        'resolved'    => AppColors.success,
-        'closed'      => AppColors.textMuted,
+        'NEW'         => AppColors.primary,
+        'ASSIGNED'    => AppColors.warning,
+        'IN_PROGRESS' => AppColors.warning,
+        'RESOLVED'    => AppColors.success,
+        'CLOSED'      => AppColors.textMuted,
         _             => AppColors.textMuted,
       };
 
   String get _statusLabel => switch (complaint.status) {
-        'new'         => 'New',
-        'assigned'    => 'Assigned',
-        'in_progress' => 'In progress',
-        'resolved'    => 'Resolved',
-        'closed'      => 'Closed',
+        'NEW'         => 'New',
+        'ASSIGNED'    => 'Assigned',
+        'IN_PROGRESS' => 'In progress',
+        'RESOLVED'    => 'Resolved',
+        'CLOSED'      => 'Closed',
         _             => complaint.status,
       };
 
@@ -211,25 +213,25 @@ class ComplaintCard extends ConsumerWidget {
           const Divider(height: 1),
           const SizedBox(height: 8),
           Row(children: [
-            if (complaint.status == 'new')
+            if (complaint.status.toUpperCase() == 'NEW')
               Expanded(child: _ActionBtn(
                 label: 'Assign',
                 color: AppColors.primary,
                 icon: Icons.person_add_outlined,
                 onTap: () async {
                   await ref.read(complaintRepositoryProvider)
-                      .update(complaint.complaintId, {'status': 'assigned'});
+                      .update(complaint.complaintId, {'status': 'ASSIGNED'});
                   onUpdate?.call();
                 },
               )),
-            if (complaint.status == 'assigned' || complaint.status == 'in_progress')
+            if (complaint.status.toUpperCase() == 'ASSIGNED' || complaint.status.toUpperCase() == 'IN_PROGRESS')
               Expanded(child: _ActionBtn(
                 label: 'Mark In Progress',
                 color: AppColors.warning,
                 icon: Icons.engineering_outlined,
                 onTap: () async {
                   await ref.read(complaintRepositoryProvider)
-                      .update(complaint.complaintId, {'status': 'in_progress'});
+                      .update(complaint.complaintId, {'status': 'IN_PROGRESS'});
                   onUpdate?.call();
                 },
               )),
@@ -240,8 +242,7 @@ class ComplaintCard extends ConsumerWidget {
               icon: Icons.check_circle_outline,
               onTap: () async {
                 await ref.read(complaintRepositoryProvider)
-                    .update(complaint.complaintId, {'status': 'resolved',
-                    'resolution': 'Issue resolved by maintenance team'});
+                    .update(complaint.complaintId, {'status': 'RESOLVED', 'resolution': 'Issue resolved by maintenance team'});
                 onUpdate?.call();
               },
             )),
@@ -277,7 +278,7 @@ class _LifecycleSteps extends StatelessWidget {
   final String status;
   const _LifecycleSteps({required this.status});
 
-  static const _steps = ['new', 'assigned', 'in_progress', 'resolved'];
+  static const _steps = ['NEW', 'ASSIGNED', 'IN_PROGRESS', 'RESOLVED'];
 
   int get _currentIdx => _steps.indexOf(status).clamp(0, _steps.length - 1);
 
