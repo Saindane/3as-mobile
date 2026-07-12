@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../shared/widgets/stat_card.dart';
 import '../providers/bill_provider.dart';
+import '../../../dashboard/presentation/providers/dashboard_provider.dart';
 
 class GenerateBillsScreen extends ConsumerStatefulWidget {
   const GenerateBillsScreen({super.key});
@@ -63,6 +64,13 @@ class _GenerateBillsScreenState extends ConsumerState<GenerateBillsScreen> {
     final state = ref.watch(generateBillsProvider);
 
     ref.listen(generateBillsProvider, (_, next) {
+      if (next.result != null) {
+        // Invalidate all bill providers so fresh data loads immediately
+        ref.invalidate(allBillsProvider);
+        ref.invalidate(myBillsProvider);
+        ref.invalidate(collectionSummaryProvider);
+        ref.invalidate(dashboardStatsProvider);
+      }
       if (next.error != null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(next.error!), backgroundColor: AppColors.error));
