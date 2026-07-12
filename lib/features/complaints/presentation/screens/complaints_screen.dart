@@ -97,14 +97,14 @@ class _ComplaintList extends ConsumerWidget {
       error:   (e, _) => Center(child: Text('Error: $e')),
       data: (complaints) {
         final filtered = filter == null ? complaints
-            : filter == 'open'     ? complaints.where((c) => c.isOpen).toList()
+            : filter == 'OPEN'     ? complaints.where((c) => c.isOpen).toList()
             : complaints.where((c) => c.isResolved).toList();
 
         if (filtered.isEmpty) {
           return EmptyState(
             icon: Icons.build_circle_outlined,
-            title: filter == 'open' ? 'No open complaints' : 'No complaints found',
-            subtitle: filter == 'open'
+            title: filter == 'OPEN' ? 'No open complaints' : 'No complaints found',
+            subtitle: filter == 'OPEN'
                 ? 'All issues have been resolved.'
                 : 'Raise a complaint using the button above.',
           );

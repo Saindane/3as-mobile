@@ -48,7 +48,7 @@ class ComplaintModel {
         raiserName:  j['raiser_name']  as String?,
       );
 
-  bool get isOpen     => !['resolved', 'closed'].contains(status);
-  bool get isResolved => status == 'resolved' || status == 'closed';
-  bool get isNew      => status == 'new';
+  bool get isOpen     => !['RESOLVED', 'CLOSED'].contains(status.toUpperCase());
+  bool get isResolved => status.toUpperCase() == 'RESOLVED' || status.toUpperCase() == 'CLOSED';
+  bool get isNew      => status.toUpperCase() == 'NEW';
 }
