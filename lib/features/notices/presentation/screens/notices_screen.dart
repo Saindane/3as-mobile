@@ -15,9 +15,7 @@ class NoticesScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final noticesAsync = ref.watch(noticesProvider);
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: Column(children: [
+    return Column(children: [
         Container(
           color: AppColors.surface,
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
@@ -82,8 +80,7 @@ class NoticesScreen extends ConsumerWidget {
             },
           ),
         ),
-      ]),
-    );
+      ]);
   }
 
   void _showPublishSheet(BuildContext context, WidgetRef ref) {
