@@ -4,6 +4,10 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../constants/app_constants.dart';
 import '../constants/api_endpoints.dart';
 
+// ── Global logout callback — set by AuthNotifier ─────────────────
+// Called when 401 received and refresh fails → forces logout
+void Function()? onForceLogout;
+
 // ── In-memory store — token + user profile ────────────────────────
 class TokenStore {
   static String? _accessToken;
@@ -113,7 +117,14 @@ class _AuthInterceptor extends Interceptor {
         } catch (_) {
           TokenStore.clear();
           await _storage.deleteAll();
+          // Force logout — redirect to login screen
+          onForceLogout?.call();
         }
+      } else {
+        // No refresh token — force logout immediately
+        TokenStore.clear();
+        await _storage.deleteAll();
+        onForceLogout?.call();
       }
     }
     handler.next(err);

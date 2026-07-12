@@ -25,6 +25,9 @@ class AuthNotifier extends ChangeNotifier {
   bool get isLoggedIn => _isLoggedIn;
 
   Future<void> _init() async {
+    // Set global logout callback so DioClient can force logout on 401
+    onForceLogout = () => logout();
+
     final token   = await _storage.read(key: AppConstants.kAccessToken);
     final refresh = await _storage.read(key: AppConstants.kRefreshToken);
     final userId  = await _storage.read(key: AppConstants.kUserId);
