@@ -29,8 +29,8 @@ class ComplaintDatasource {
     try {
       final res = await _client.post(ApiEndpoints.complaints, data: {
         'title':       title,
-        'category':    category,
-        'priority':    priority,
+        'category':    category.toUpperCase(),
+        'priority':    priority.toUpperCase(),
         'description': description,
       });
       return ComplaintModel.fromJson(res.data as Map<String, dynamic>);
