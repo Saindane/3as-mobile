@@ -73,8 +73,9 @@ class _PayNowScreenState extends ConsumerState<PayNowScreen> {
       // Reset to step 0 instead of Navigator.pop
       // (popping causes blank screen when screen is embedded in AppShell)
       setState(() {
-        _step        = 0;
-        _selectedBill = null;
+        _step           = 0;
+        _selectedBillId = null;
+        _selectedAmount = 0;
         _utrCtr.clear();
       });
     });
