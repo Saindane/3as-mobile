@@ -130,16 +130,18 @@ class _UsersPage extends ConsumerWidget {
             Row(children: [
               AppBadge(label: '${users.length} total', color: AppColors.primary),
               const SizedBox(width: 8),
-              ElevatedButton.icon(
-                onPressed: () => _showAddUserDialog(context, ref),
-                icon: const Icon(Icons.person_add_outlined, size: 16),
-                label: const Text('Add user'),
-                style: ElevatedButton.styleFrom(
-                  minimumSize: Size.zero,
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                  textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+              // Only admin can add users
+              if (TokenStore.role?.toUpperCase() == 'ADMIN')
+                ElevatedButton.icon(
+                  onPressed: () => _showAddUserDialog(context, ref),
+                  icon: const Icon(Icons.person_add_outlined, size: 16),
+                  label: const Text('Add user'),
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: Size.zero,
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                  ),
                 ),
-              ),
             ]),
           ]),
           const SizedBox(height: 16),
