@@ -79,6 +79,7 @@ class AppShell extends ConsumerStatefulWidget {
 
 class _AppShellState extends ConsumerState<AppShell> {
   int _selectedIndex = 0;
+  bool _hasUnread = true; // shows red dot until user opens notifications
 
   List<NavItem> get _navItems =>
       widget.userRole.toUpperCase() == 'ADMIN' ? _adminNav
@@ -234,10 +235,11 @@ class _AppShellState extends ConsumerState<AppShell> {
                         color: AppColors.textSecondary),
                     onPressed: () => _showNotifications(context),
                   ),
-                  Positioned(top: 8, right: 8,
-                    child: Container(width: 8, height: 8,
-                        decoration: const BoxDecoration(
-                            color: AppColors.error, shape: BoxShape.circle))),
+                  if (_hasUnread)
+                    Positioned(top: 8, right: 8,
+                      child: Container(width: 8, height: 8,
+                          decoration: const BoxDecoration(
+                              color: AppColors.error, shape: BoxShape.circle))),
                 ]),
               ]),
             ),
@@ -304,6 +306,7 @@ class _AppShellState extends ConsumerState<AppShell> {
   }
 
   void _showNotifications(BuildContext context) {
+    setState(() => _hasUnread = false); // clear red dot
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
