@@ -8,6 +8,7 @@ import '../../features/auth/presentation/screens/otp_screen.dart';
 import '../../features/auth/presentation/screens/new_password_screen.dart';
 import '../../features/dashboard/presentation/screens/dashboard_screen.dart';
 import '../constants/app_constants.dart';
+import '../providers/branding_provider.dart';
 import '../network/dio_client.dart';
 
 // ── Session key — increment to bust ALL provider caches ──────────

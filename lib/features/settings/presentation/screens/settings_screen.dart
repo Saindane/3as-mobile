@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../../../core/constants/api_endpoints.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/providers/branding_provider.dart';
 import '../../../../shared/widgets/stat_card.dart';
 
 // ── Provider ──────────────────────────────────────────────────────
