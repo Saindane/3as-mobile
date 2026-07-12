@@ -1045,13 +1045,7 @@ class ProfileScreen extends ConsumerWidget {
               title: const Text('Change password'),
               trailing: const Icon(Icons.chevron_right, color: AppColors.textMuted),
               onTap: () => _showChangePasswordDialog(context, ref)),
-            const Divider(height: 1),
-            ListTile(dense: true,
-              leading: const Icon(Icons.notifications_outlined, color: AppColors.primary),
-              title: const Text('Notification settings'),
-              trailing: const Icon(Icons.chevron_right, color: AppColors.textMuted),
-              onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Notification settings coming soon')))),
+
           ])),
           const SizedBox(height: 12),
           OutlinedButton.icon(
