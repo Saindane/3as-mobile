@@ -12,11 +12,16 @@ class NoticeDatasource {
     try {
       final res = await _client.get(ApiEndpoints.notices,
           queryParameters: {'active_only': activeOnly});
-      return (res.data['items'] as List)
+      if (res.data == null) return [];
+      final data = res.data as Map<String, dynamic>;
+      final items = data['items'] as List? ?? [];
+      return items
           .map((j) => NoticeModel.fromJson(j as Map<String, dynamic>))
           .toList();
     } on DioException catch (e) {
       throw ApiException.fromDioException(e);
+    } catch (e) {
+      throw ApiException(message: e.toString());
     }
   }
 

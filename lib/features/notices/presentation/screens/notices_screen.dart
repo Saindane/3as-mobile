@@ -38,7 +38,22 @@ class NoticesScreen extends ConsumerWidget {
         Expanded(
           child: noticesAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
-            error:   (e, _) => Center(child: Text('Error: $e')),
+            error: (e, _) => Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  const Icon(Icons.error_outline, size: 40, color: AppColors.error),
+                  const SizedBox(height: 10),
+                  Text(e.toString(), textAlign: TextAlign.center,
+                      style: AppTextStyles.body),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () => ref.invalidate(noticesProvider),
+                    child: const Text('Retry'),
+                  ),
+                ]),
+              ),
+            ),
             data: (notices) {
               if (notices.isEmpty) {
                 return const EmptyState(
