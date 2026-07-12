@@ -15,92 +15,75 @@ class NoticesScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final noticesAsync = ref.watch(noticesProvider);
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: noticesAsync.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                const Icon(Icons.error_outline, size: 40, color: AppColors.error),
-                const SizedBox(height: 10),
-                Text(e.toString(), textAlign: TextAlign.center),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: () => ref.invalidate(noticesProvider),
-                  child: const Text('Retry'),
-                ),
-              ]),
+    return noticesAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            const Icon(Icons.error_outline, size: 40, color: AppColors.error),
+            const SizedBox(height: 10),
+            Text(e.toString(), textAlign: TextAlign.center),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () => ref.invalidate(noticesProvider),
+              child: const Text('Retry'),
             ),
-          ),
-          data: (notices) => RefreshIndicator(
-            onRefresh: () async => ref.invalidate(noticesProvider),
-            child: CustomScrollView(
-              slivers: [
-                // Header
-                SliverToBoxAdapter(
-                  child: Container(
-                    color: AppColors.surface,
-                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text('Notices', style: AppTextStyles.heading2),
-                        if (isAdmin)
-                          ElevatedButton.icon(
-                            onPressed: () => _showPublishSheet(context, ref),
-                            icon: const Icon(Icons.add, size: 16),
-                            label: const Text('Publish'),
-                            style: ElevatedButton.styleFrom(
-                              minimumSize: Size.zero,
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 14, vertical: 8),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                // Empty state
-                if (notices.isEmpty)
-                  const SliverFillRemaining(
-                    child: EmptyState(
-                      icon: Icons.campaign_outlined,
-                      title: 'No notices yet',
-                      subtitle: 'Society announcements will appear here.',
-                    ),
-                  ),
-
-                // Notice list
-                if (notices.isNotEmpty)
-                  SliverPadding(
-                    padding: const EdgeInsets.all(16),
-                    sliver: SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                        (_, i) => Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: _NoticeCard(
-                            notice: notices[i],
-                            isAdmin: isAdmin,
-                            onDelete: () async {
-                              await ref
-                                  .read(noticeRepositoryProvider)
-                                  .deleteNotice(notices[i].noticeId);
-                              ref.invalidate(noticesProvider);
-                            },
-                          ),
-                        ),
-                        childCount: notices.length,
-                      ),
+          ]),
+        ),
+      ),
+      data: (notices) => Column(
+        children: [
+          // Header
+          Container(
+            color: AppColors.surface,
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Notices', style: AppTextStyles.heading2),
+                if (isAdmin)
+                  ElevatedButton.icon(
+                    onPressed: () => _showPublishSheet(context, ref),
+                    icon: const Icon(Icons.add, size: 16),
+                    label: const Text('Publish'),
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: Size.zero,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 8),
                     ),
                   ),
               ],
             ),
           ),
-        ),
+          // Content
+          Expanded(
+            child: notices.isEmpty
+                ? const EmptyState(
+                    icon: Icons.campaign_outlined,
+                    title: 'No notices yet',
+                    subtitle: 'Society announcements will appear here.',
+                  )
+                : RefreshIndicator(
+                    onRefresh: () async => ref.invalidate(noticesProvider),
+                    child: ListView.separated(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: notices.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 10),
+                      itemBuilder: (_, i) => _NoticeCard(
+                        notice: notices[i],
+                        isAdmin: isAdmin,
+                        onDelete: () async {
+                          await ref
+                              .read(noticeRepositoryProvider)
+                              .deleteNotice(notices[i].noticeId);
+                          ref.invalidate(noticesProvider);
+                        },
+                      ),
+                    ),
+                  ),
+          ),
+        ],
       ),
     );
   }
@@ -268,18 +251,14 @@ class _PublishNoticeSheetState extends ConsumerState<_PublishNoticeSheet> {
             TextField(
               controller: _titleCtr,
               decoration: const InputDecoration(
-                labelText: 'Title',
-                border: OutlineInputBorder(),
-              ),
+                  labelText: 'Title', border: OutlineInputBorder()),
             ),
             const SizedBox(height: 10),
             TextField(
               controller: _bodyCtr,
               maxLines: 3,
               decoration: const InputDecoration(
-                labelText: 'Body',
-                border: OutlineInputBorder(),
-              ),
+                  labelText: 'Body', border: OutlineInputBorder()),
             ),
             const SizedBox(height: 10),
             Row(children: [
@@ -292,7 +271,8 @@ class _PublishNoticeSheetState extends ConsumerState<_PublishNoticeSheet> {
                     'general', 'maintenance', 'finance',
                     'security', 'emergency'
                   ]
-                      .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                      .map((c) =>
+                          DropdownMenuItem(value: c, child: Text(c)))
                       .toList(),
                   onChanged: (v) => setState(() => _category = v!),
                 ),
@@ -304,7 +284,8 @@ class _PublishNoticeSheetState extends ConsumerState<_PublishNoticeSheet> {
                   decoration: const InputDecoration(
                       labelText: 'Priority', border: OutlineInputBorder()),
                   items: ['normal', 'high', 'urgent']
-                      .map((p) => DropdownMenuItem(value: p, child: Text(p)))
+                      .map((p) =>
+                          DropdownMenuItem(value: p, child: Text(p)))
                       .toList(),
                   onChanged: (v) => setState(() => _priority = v!),
                 ),
@@ -319,8 +300,9 @@ class _PublishNoticeSheetState extends ConsumerState<_PublishNoticeSheet> {
                       child: CircularProgressIndicator(
                           strokeWidth: 2, color: Colors.white))
                   : const Icon(Icons.send, size: 16),
-              label: Text(
-                  state.isLoading ? 'Publishing...' : 'Publish & notify all'),
+              label: Text(state.isLoading
+                  ? 'Publishing...'
+                  : 'Publish & notify all'),
               style: ElevatedButton.styleFrom(
                   minimumSize: const Size(double.infinity, 48)),
             ),
