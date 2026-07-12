@@ -167,11 +167,56 @@ class _PayNowScreenState extends ConsumerState<PayNowScreen> {
                             : bill.isOverdue
                                 ? AppColors.error.withOpacity(.4)
                                 : null,
-                    onTap: canPay ? () => setState(() {
-                      _selectedBillId = bill.billId;
-                      _selectedAmount = bill.total;
-                      _step = 1;
-                    }) : null,
+                    onTap: canPay
+                        ? () => setState(() {
+                            _selectedBillId = bill.billId;
+                            _selectedAmount = bill.total;
+                            _step = 1;
+                          })
+                        : hasPendingPayment
+                            ? () {
+                                // Show payment details - UTR already submitted
+                                final payment = myPaymentsAsync.valueOrNull
+                                    ?.firstWhere((p) => p.billId == bill.billId,
+                                        orElse: () => myPaymentsAsync.valueOrNull!.first);
+                                if (payment != null) {
+                                  showDialog(context: context, builder: (_) =>
+                                    AlertDialog(
+                                      title: const Text('Payment submitted'),
+                                      content: Column(mainAxisSize: MainAxisSize.min, children: [
+                                        const Icon(Icons.pending_outlined,
+                                            size: 48, color: AppColors.warning),
+                                        const SizedBox(height: 12),
+                                        _PaymentDetailRow(label: 'Bill', value: '${bill.monthName} ${bill.year}'),
+                                        _PaymentDetailRow(label: 'Amount', value: '₹${payment.amount.toStringAsFixed(0)}'),
+                                        _PaymentDetailRow(label: 'UTR / Ref No', value: payment.utr ?? '-'),
+                                        _PaymentDetailRow(label: 'Mode', value: payment.mode),
+                                        _PaymentDetailRow(label: 'Status', value: 'Awaiting verification'),
+                                        const SizedBox(height: 8),
+                                        Container(
+                                          padding: const EdgeInsets.all(10),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.warningLight,
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: const Text(
+                                            'Management will verify your payment within 24 hours.',
+                                            textAlign: TextAlign.center,
+                                            style: TextStyle(fontSize: 12, color: AppColors.warning),
+                                          ),
+                                        ),
+                                      ]),
+                                      actions: [
+                                        ElevatedButton(
+                                          onPressed: () => Navigator.pop(context),
+                                          child: const Text('Close'),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }
+                              }
+                            : null,
                     child: Row(children: [
                       Expanded(child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -391,4 +436,24 @@ class _Arrow extends StatelessWidget {
   Widget build(BuildContext context) =>
       const Padding(padding: EdgeInsets.symmetric(horizontal: 4),
           child: Icon(Icons.chevron_right, size: 16, color: AppColors.textMuted));
+}
+
+class _PaymentDetailRow extends StatelessWidget {
+  final String label, value;
+  const _PaymentDetailRow({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 5),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: const TextStyle(
+            fontSize: 13, color: AppColors.textMuted)),
+        Flexible(child: Text(value, textAlign: TextAlign.end,
+            style: const TextStyle(
+                fontSize: 13, fontWeight: FontWeight.w600))),
+      ],
+    ),
+  );
 }
