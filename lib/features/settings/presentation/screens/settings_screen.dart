@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'package:image_picker/image_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/network/dio_client.dart';
@@ -283,4 +285,131 @@ class _SwitchRow extends StatelessWidget {
       ),
     ]),
   );
+}
+
+// ── Logo upload row ───────────────────────────────────────────────
+class _LogoUploadRow extends StatelessWidget {
+  final String currentBase64;
+  final Future<void> Function(String base64) onUploaded;
+  final Future<void> Function() onRemove;
+
+  const _LogoUploadRow({
+    required this.currentBase64,
+    required this.onUploaded,
+    required this.onRemove,
+  });
+
+  bool get _hasLogo => currentBase64.isNotEmpty;
+
+  Future<void> _pickImage(BuildContext context) async {
+    try {
+      final picker = ImagePicker();
+      final XFile? file = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth:  256,
+        maxHeight: 256,
+        imageQuality: 85,
+      );
+      if (file == null) return;
+
+      final bytes = await file.readAsBytes();
+      final ext = file.name.split('.').last.toLowerCase();
+      final mimeType = ext == 'png' ? 'image/png' : 'image/jpeg';
+      final base64Str = 'data:$mimeType;base64,${base64Encode(bytes)}';
+
+      if (base64Str.length > 500000) {
+        // ignore: use_build_context_synchronously
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Image too large. Please use an image under 200KB.'),
+          backgroundColor: AppColors.error,
+        ));
+        return;
+      }
+
+      await onUploaded(base64Str);
+
+      // ignore: use_build_context_synchronously
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Logo updated successfully'),
+        backgroundColor: AppColors.success,
+      ));
+    } catch (e) {
+      // ignore: use_build_context_synchronously
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Error: $e'),
+        backgroundColor: AppColors.error,
+      ));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      child: Row(children: [
+        const Icon(Icons.image_outlined, size: 18, color: AppColors.textMuted),
+        const SizedBox(width: 10),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text('App logo', style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+          const SizedBox(height: 4),
+          if (_hasLogo)
+            Row(children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.memory(
+                  base64Decode(currentBase64.split(',').last),
+                  width: 40, height: 40, fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) =>
+                      const Icon(Icons.broken_image, size: 40),
+                ),
+              ),
+              const SizedBox(width: 10),
+              const Text('Logo uploaded',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600,
+                      color: AppColors.success)),
+            ])
+          else
+            const Text('No logo (using default icon)',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+        ])),
+        const SizedBox(width: 8),
+        // Upload button
+        TextButton.icon(
+          onPressed: () => _pickImage(context),
+          icon: const Icon(Icons.upload_outlined, size: 16),
+          label: Text(_hasLogo ? 'Change' : 'Upload'),
+          style: TextButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            minimumSize: Size.zero,
+          ),
+        ),
+        // Remove button
+        if (_hasLogo)
+          IconButton(
+            icon: const Icon(Icons.delete_outline, size: 18, color: AppColors.error),
+            onPressed: () async {
+              final confirm = await showDialog<bool>(
+                context: context,
+                builder: (_) => AlertDialog(
+                  title: const Text('Remove logo'),
+                  content: const Text('Remove the app logo? Default icon will be used.'),
+                  actions: [
+                    TextButton(onPressed: () => Navigator.pop(context, false),
+                        child: const Text('Cancel')),
+                    ElevatedButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+                      child: const Text('Remove'),
+                    ),
+                  ],
+                ),
+              );
+              if (confirm == true) await onRemove();
+            },
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+          ),
+      ]),
+    );
+  }
 }

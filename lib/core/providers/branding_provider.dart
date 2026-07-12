@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../network/dio_client.dart';
@@ -29,6 +30,10 @@ class AppBranding {
     appLogoUrl:   j['app_logo_url']      as String? ?? '',
     primaryColor: j['app_primary_color'] as String? ?? '#2563EB',
   );
+
+  bool get isBase64Logo => appLogoUrl.startsWith('data:image');
+  bool get isNetworkLogo => appLogoUrl.startsWith('http');
+  bool get hasLogo => appLogoUrl.isNotEmpty;
 
   Color get primaryColorValue {
     try {

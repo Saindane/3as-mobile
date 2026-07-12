@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -136,15 +137,24 @@ class _AppShellState extends ConsumerState<AppShell> {
                     decoration: BoxDecoration(
                       color: branding.primaryColorValue,
                       borderRadius: BorderRadius.circular(9)),
-                    child: branding.appLogoUrl.isNotEmpty
+                    child: branding.isBase64Logo
                         ? ClipRRect(
                             borderRadius: BorderRadius.circular(9),
-                            child: Image.network(branding.appLogoUrl,
+                            child: Image.memory(
+                                base64Decode(branding.appLogoUrl.split(',').last),
                                 width: 36, height: 36, fit: BoxFit.cover,
                                 errorBuilder: (_, __, ___) =>
                                     const Icon(Icons.apartment, color: Colors.white, size: 20)),
                           )
-                        : const Icon(Icons.apartment, color: Colors.white, size: 20),
+                        : branding.isNetworkLogo
+                            ? ClipRRect(
+                                borderRadius: BorderRadius.circular(9),
+                                child: Image.network(branding.appLogoUrl,
+                                    width: 36, height: 36, fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) =>
+                                        const Icon(Icons.apartment, color: Colors.white, size: 20)),
+                              )
+                            : const Icon(Icons.apartment, color: Colors.white, size: 20),
                   ),
                   const SizedBox(width: 10),
                   Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
