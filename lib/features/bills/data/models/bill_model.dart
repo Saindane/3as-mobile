@@ -34,9 +34,9 @@ class BillModel {
         maintenance: (j['maintenance'] as num).toDouble(),
         penalty:     (j['penalty']     as num).toDouble(),
         total:       (j['total']       as num).toDouble(),
-        dueDate:     j['due_date']     as String?,
-        status:      j['status']       as String,
-        createdAt:   j['created_at']   as String,
+        dueDate:     j['due_date']?.toString(),
+        status:      j['status']?.toString() ?? 'PENDING',
+        createdAt:   j['created_at']?.toString() ?? '',
       );
 
   bool get isOverdue  => status.toUpperCase() == 'OVERDUE';
