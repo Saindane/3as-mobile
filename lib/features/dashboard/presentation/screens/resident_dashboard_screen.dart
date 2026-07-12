@@ -206,7 +206,7 @@ class ResidentDashboardScreen extends ConsumerWidget {
               if (complaints.isEmpty) return const SizedBox();
               final recent = complaints.take(3).toList();
               return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const SectionHeader(title: 'Recent complaints'),
+                const SectionHeader(title: 'My complaints'),
                 const SizedBox(height: 10),
                 AppCard(child: Column(children: [
                   ...recent.asMap().entries.map((e) => Column(children: [
@@ -234,7 +234,7 @@ class ResidentDashboardScreen extends ConsumerWidget {
               if (notices.isEmpty) return const SizedBox();
               final recent = notices.take(3).toList();
               return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const SectionHeader(title: 'Recent notices'),
+                const SectionHeader(title: 'Latest notices'),
                 const SizedBox(height: 10),
                 AppCard(child: Column(children: [
                   ...recent.asMap().entries.map((e) => Column(children: [
