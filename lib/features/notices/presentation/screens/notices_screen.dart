@@ -175,7 +175,8 @@ class _NoticeCard extends StatelessWidget {
           ],
           Text(_formatDate(notice.createdAt), style: AppTextStyles.caption),
         ]),
-      ]),
+        ),
+      ),
     );
   }
 
