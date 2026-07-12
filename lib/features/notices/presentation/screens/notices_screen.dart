@@ -124,19 +124,23 @@ class _NoticeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        border: Border(
-          left:   BorderSide(color: _priorityColor, width: 4),
-          top:    BorderSide(color: AppColors.border),
-          right:  BorderSide(color: AppColors.border),
-          bottom: BorderSide(color: AppColors.border),
-        ),
+    return Card(
+      elevation: 0,
+      color: AppColors.surface,
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
+        side: const BorderSide(color: AppColors.border),
       ),
-      padding: const EdgeInsets.all(14),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      child: Container(
+        decoration: BoxDecoration(
+          border: Border(left: BorderSide(color: _priorityColor, width: 4)),
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(12),
+            bottomLeft: Radius.circular(12),
+          ),
+        ),
+        padding: const EdgeInsets.all(14),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
           Expanded(
             child: Text(notice.title,
