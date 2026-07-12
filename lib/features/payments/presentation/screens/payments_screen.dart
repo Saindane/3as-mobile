@@ -136,15 +136,15 @@ class _PaymentCard extends StatelessWidget {
   final bool showUnit;
   const _PaymentCard({required this.payment, this.showUnit = false});
 
-  Color get _statusColor => switch (payment.status) {
-        'verified' => AppColors.success,
-        'rejected' => AppColors.error,
+  Color get _statusColor => switch (payment.status.toUpperCase()) {
+        'VERIFIED' => AppColors.success,
+        'REJECTED' => AppColors.error,
         _          => AppColors.warning,
       };
 
-  IconData get _statusIcon => switch (payment.status) {
-        'verified' => Icons.check_circle_outline,
-        'rejected' => Icons.cancel_outlined,
+  IconData get _statusIcon => switch (payment.status.toUpperCase()) {
+        'VERIFIED' => Icons.check_circle_outline,
+        'REJECTED' => Icons.cancel_outlined,
         _          => Icons.pending_outlined,
       };
 
@@ -175,7 +175,7 @@ class _PaymentCard extends StatelessWidget {
               style: AppTextStyles.caption.copyWith(color: AppColors.primary)),
       ])),
       AppBadge(
-        label: payment.status[0].toUpperCase() + payment.status.substring(1),
+        label: payment.status[0].toUpperCase() + payment.status.substring(1).toLowerCase(),
         color: _statusColor,
       ),
     ]));

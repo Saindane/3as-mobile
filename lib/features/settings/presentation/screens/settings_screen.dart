@@ -25,7 +25,20 @@ class SettingsScreen extends ConsumerWidget {
       backgroundColor: AppColors.background,
       body: settingsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error:   (e, _) => Center(child: Text('Error: $e')),
+        error: (e, _) => Center(child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            const Icon(Icons.error_outline, size: 40, color: AppColors.error),
+            const SizedBox(height: 10),
+            Text(e.toString(), textAlign: TextAlign.center),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: () => ref.invalidate(settingsProvider),
+              icon: const Icon(Icons.refresh, size: 16),
+              label: const Text('Retry'),
+            ),
+          ]),
+        )),
         data: (settings) {
           final Map<String, String> map = {
             for (final s in settings) s['key'] as String: s['value'] as String,

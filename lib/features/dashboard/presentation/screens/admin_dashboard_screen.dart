@@ -64,11 +64,11 @@ class AdminDashboardScreen extends ConsumerWidget {
           const SizedBox(height: 16),
 
           // ── KPI stats ────────────────────────────────────
-          const SectionHeader(title: 'June 2025 overview'),
+          SectionHeader(title: '${_monthName(DateTime.now().month)} ${DateTime.now().year} overview'),
           const SizedBox(height: 10),
           statsAsync.when(
             loading: () => const _StatsGridSkeleton(),
-            error:   (e, _) => _ErrorCard(message: e.toString()),
+            error:   (e, _) => _ErrorCard(message: 'Could not load stats. ${e.toString()}'),
             data: (stats) => Column(children: [
               GridView.count(
                 crossAxisCount: 2, crossAxisSpacing: 10, mainAxisSpacing: 10,
