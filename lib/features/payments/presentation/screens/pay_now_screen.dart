@@ -70,7 +70,13 @@ class _PayNowScreenState extends ConsumerState<PayNowScreen> {
       ref.read(submitPaymentProvider.notifier).reset();
       ref.invalidate(myPaymentsProvider);
       ref.invalidate(myBillsProvider);
-      Navigator.pop(context);
+      // Reset to step 0 instead of Navigator.pop
+      // (popping causes blank screen when screen is embedded in AppShell)
+      setState(() {
+        _step        = 0;
+        _selectedBill = null;
+        _utrCtr.clear();
+      });
     });
 
     return Scaffold(
