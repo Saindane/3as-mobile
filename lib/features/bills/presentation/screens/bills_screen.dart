@@ -108,7 +108,7 @@ class _BillsList extends ConsumerWidget {
       error:   (e, _) => _ErrorView(e.toString()),
       data:    (bills) {
         final filtered = filter != null
-            ? bills.where((b) => b.status == filter).toList()
+            ? bills.where((b) => b.status.toUpperCase() == filter!.toUpperCase()).toList()
             : bills;
 
         if (filtered.isEmpty) {

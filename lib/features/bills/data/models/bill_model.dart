@@ -39,10 +39,10 @@ class BillModel {
         createdAt:   j['created_at']   as String,
       );
 
-  bool get isOverdue  => status == 'overdue';
-  bool get isPaid     => status == 'paid';
-  bool get isPending  => status == 'pending';
-  bool get isWaived   => status == 'waived';
+  bool get isOverdue  => status.toUpperCase() == 'OVERDUE';
+  bool get isPaid     => status.toUpperCase() == 'PAID';
+  bool get isPending  => status.toUpperCase() == 'PENDING';
+  bool get isWaived   => status.toUpperCase() == 'WAIVED';
   bool get haspenalty => penalty > 0;
 
   String get monthName => const [

@@ -18,7 +18,7 @@ class PayNowScreen extends ConsumerStatefulWidget {
 
 class _PayNowScreenState extends ConsumerState<PayNowScreen> {
   final _utrCtr  = TextEditingController();
-  String _mode   = 'upi';
+  String _mode   = 'UPI';
   int?   _selectedBillId;
   double _selectedAmount = 0;
   int    _step = 0; // 0: select bill, 1: payment details, 2: success
@@ -223,7 +223,7 @@ class _PayNowScreenState extends ConsumerState<PayNowScreen> {
                   borderSide: BorderSide(color: AppColors.border),
                 ),
               ),
-              items: ['upi', 'neft', 'rtgs', 'cash', 'cheque']
+              items: ['UPI', 'NEFT', 'RTGS', 'CASH', 'CHEQUE']
                   .map((m) => DropdownMenuItem(value: m, child: Text(m.toUpperCase())))
                   .toList(),
               onChanged: (v) => setState(() => _mode = v!),
