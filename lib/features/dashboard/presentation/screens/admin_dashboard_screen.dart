@@ -18,7 +18,7 @@ class AdminDashboardScreen extends ConsumerWidget {
     final complaintsAsync = ref.watch(complaintsProvider);
     final paymentsAsync   = ref.watch(pendingPaymentsProvider);
     final billsAsync      = ref.watch(allBillsProvider((
-        month: DateTime.now().month, year: DateTime.now().year)));
+        month: DateTime.now().month, year: DateTime.now().year, status: null)));
 
     return RefreshIndicator(
       onRefresh: () async {
@@ -167,7 +167,7 @@ class AdminDashboardScreen extends ConsumerWidget {
             error:   (_, __) => const SizedBox(),
             data: (payments) {
               final pending = payments
-                  .where((p) => p['status']?.toString().toUpperCase() == 'PENDING')
+                  .where((p) => p.status.toUpperCase() == 'PENDING')
                   .length;
               if (pending == 0) return const SizedBox();
               return Padding(
