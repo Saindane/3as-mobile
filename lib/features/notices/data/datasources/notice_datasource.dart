@@ -12,11 +12,45 @@ class NoticeDatasource {
     try {
       final res = await _client.get(ApiEndpoints.notices,
           queryParameters: {'active_only': activeOnly});
-      return (res.data['items'] as List)
-          .map((j) => NoticeModel.fromJson(j as Map<String, dynamic>))
-          .toList();
+
+      // ignore: avoid_print
+      print('[Notices] statusCode: ${res.statusCode}');
+      // ignore: avoid_print
+      print('[Notices] data type: ${res.data.runtimeType}');
+      // ignore: avoid_print
+      print('[Notices] data: ${res.data}');
+
+      if (res.data == null) return [];
+
+      final data = res.data as Map<String, dynamic>;
+      final items = data['items'] as List? ?? [];
+
+      // ignore: avoid_print
+      print('[Notices] items count: ${items.length}');
+
+      final result = <NoticeModel>[];
+      for (int i = 0; i < items.length; i++) {
+        try {
+          final model = NoticeModel.fromJson(items[i] as Map<String, dynamic>);
+          result.add(model);
+          // ignore: avoid_print
+          print('[Notices] parsed[$i]: ${model.title}');
+        } catch (e) {
+          // ignore: avoid_print
+          print('[Notices] PARSE ERROR[$i]: $e');
+          // ignore: avoid_print
+          print('[Notices] raw[$i]: ${items[i]}');
+        }
+      }
+      return result;
     } on DioException catch (e) {
+      // ignore: avoid_print
+      print('[Notices] DioException: $e');
       throw ApiException.fromDioException(e);
+    } catch (e) {
+      // ignore: avoid_print
+      print('[Notices] Exception: $e');
+      throw ApiException(message: e.toString());
     }
   }
 

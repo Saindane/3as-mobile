@@ -26,11 +26,11 @@ class NoticeModel {
         title:      j['title']       as String,
         body:       j['body']        as String,
         category:   j['category']    as String?,
-        priority:   j['priority']    as String,
+        priority:   j['priority']    as String? ?? 'normal',
         isActive:   j['is_active']   as bool,
         createdBy:  j['created_by']  as int?,
         authorName: j['author_name'] as String?,
-        createdAt:  j['created_at']  as String,
+        createdAt:  j['created_at']?.toString() ?? '',
       );
 
   bool get isUrgent => priority == 'urgent';
