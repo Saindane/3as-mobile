@@ -52,7 +52,7 @@ class DashboardScreen extends ConsumerWidget {
                 const AdminDashboardScreen(),              // 0 - Dashboard
                 const _UsersPage(),                        // 1 - Users
                 const _PropertiesPage(),                   // 2 - Properties
-                const BillsScreen(isAdmin: true),          // 3 - Billing
+                BillsScreen(isAdmin: isAdmin),             // 3 - Billing (Generate hidden for mgmt)
                 const PaymentsScreen(isAdmin: true),       // 4 - Payments
                 const ComplaintsScreen(isAdmin: true),     // 5 - Complaints
                 const NoticesScreen(isAdmin: true),        // 6 - Notices
