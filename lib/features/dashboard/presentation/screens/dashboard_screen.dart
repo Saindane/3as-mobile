@@ -1029,7 +1029,7 @@ class ProfileScreen extends ConsumerWidget {
               leading: const Icon(Icons.lock_outline, color: AppColors.primary),
               title: const Text('Change password'),
               trailing: const Icon(Icons.chevron_right, color: AppColors.textMuted),
-              onTap: () {}),
+              onTap: () => _showChangePasswordDialog(context, ref)),
             const Divider(height: 1),
             ListTile(dense: true,
               leading: const Icon(Icons.notifications_outlined, color: AppColors.primary),
@@ -1054,6 +1054,182 @@ class ProfileScreen extends ConsumerWidget {
       },
     );
   }
+}
+
+void _showChangePasswordDialog(BuildContext context, WidgetRef ref) {
+  showDialog(context: context, builder: (_) => const _ChangePasswordDialog());
+}
+
+class _ChangePasswordDialog extends ConsumerStatefulWidget {
+  const _ChangePasswordDialog();
+  @override
+  ConsumerState<_ChangePasswordDialog> createState() => _ChangePasswordDialogState();
+}
+
+class _ChangePasswordDialogState extends ConsumerState<_ChangePasswordDialog> {
+  final _currentCtr = TextEditingController();
+  final _newCtr     = TextEditingController();
+  final _confirmCtr = TextEditingController();
+  bool _isLoading   = false;
+  bool _showCurrent = false;
+  bool _showNew     = false;
+  bool _showConfirm = false;
+  String? _error;
+  String? _success;
+
+  @override
+  void dispose() {
+    _currentCtr.dispose();
+    _newCtr.dispose();
+    _confirmCtr.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (_currentCtr.text.isEmpty || _newCtr.text.isEmpty || _confirmCtr.text.isEmpty) {
+      setState(() => _error = 'All fields are required');
+      return;
+    }
+    if (_newCtr.text.length < 6) {
+      setState(() => _error = 'New password must be at least 6 characters');
+      return;
+    }
+    if (_newCtr.text != _confirmCtr.text) {
+      setState(() => _error = 'New passwords do not match');
+      return;
+    }
+    if (_newCtr.text == _currentCtr.text) {
+      setState(() => _error = 'New password must be different from current');
+      return;
+    }
+
+    setState(() { _isLoading = true; _error = null; _success = null; });
+    try {
+      final client = ref.read(dioClientProvider);
+      await client.post('${ApiEndpoints.users}/me/change-password', data: {
+        'current_password': _currentCtr.text,
+        'new_password':     _newCtr.text,
+      });
+      setState(() {
+        _isLoading = false;
+        _success = 'Password changed successfully!';
+      });
+      // Close after 1.5s
+      await Future.delayed(const Duration(milliseconds: 1500));
+      if (mounted) Navigator.pop(context);
+    } on DioException catch (e) {
+      String msg = 'Something went wrong';
+      try {
+        final data = e.response?.data;
+        if (data is Map && data['detail'] is String) {
+          msg = data['detail'];
+        }
+      } catch (_) {}
+      setState(() { _isLoading = false; _error = msg; });
+    } catch (e) {
+      setState(() { _isLoading = false; _error = e.toString(); });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: const Text('Change password',
+        style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+    content: SizedBox(width: 380, child: SingleChildScrollView(
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        // Error
+        if (_error != null)
+          Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFEE2E2),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFFDC2626).withOpacity(.3)),
+            ),
+            child: Row(children: [
+              const Icon(Icons.error_outline, color: Color(0xFFDC2626), size: 18),
+              const SizedBox(width: 8),
+              Expanded(child: Text(_error!,
+                  style: const TextStyle(color: Color(0xFFDC2626), fontSize: 13))),
+            ]),
+          ),
+        // Success
+        if (_success != null)
+          Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: const Color(0xFFDCFCE7),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(children: [
+              const Icon(Icons.check_circle_outline, color: Color(0xFF16A34A), size: 18),
+              const SizedBox(width: 8),
+              Expanded(child: Text(_success!,
+                  style: const TextStyle(color: Color(0xFF16A34A), fontSize: 13))),
+            ]),
+          ),
+        // Current password
+        TextField(
+          controller: _currentCtr,
+          obscureText: !_showCurrent,
+          decoration: InputDecoration(
+            labelText: 'Current password',
+            border: const OutlineInputBorder(),
+            prefixIcon: const Icon(Icons.lock_outline),
+            suffixIcon: IconButton(
+              icon: Icon(_showCurrent ? Icons.visibility_off : Icons.visibility),
+              onPressed: () => setState(() => _showCurrent = !_showCurrent),
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        // New password
+        TextField(
+          controller: _newCtr,
+          obscureText: !_showNew,
+          decoration: InputDecoration(
+            labelText: 'New password',
+            border: const OutlineInputBorder(),
+            prefixIcon: const Icon(Icons.lock_reset_outlined),
+            suffixIcon: IconButton(
+              icon: Icon(_showNew ? Icons.visibility_off : Icons.visibility),
+              onPressed: () => setState(() => _showNew = !_showNew),
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        // Confirm password
+        TextField(
+          controller: _confirmCtr,
+          obscureText: !_showConfirm,
+          decoration: InputDecoration(
+            labelText: 'Confirm new password',
+            border: const OutlineInputBorder(),
+            prefixIcon: const Icon(Icons.lock_reset_outlined),
+            suffixIcon: IconButton(
+              icon: Icon(_showConfirm ? Icons.visibility_off : Icons.visibility),
+              onPressed: () => setState(() => _showConfirm = !_showConfirm),
+            ),
+          ),
+        ),
+      ]),
+    )),
+    actions: [
+      TextButton(
+        onPressed: _isLoading ? null : () => Navigator.pop(context),
+        child: const Text('Cancel'),
+      ),
+      ElevatedButton(
+        onPressed: _isLoading || _success != null ? null : _submit,
+        child: _isLoading
+            ? const SizedBox(width: 16, height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+            : const Text('Change password'),
+      ),
+    ],
+  );
 }
 
 class _InfoRow extends StatelessWidget {
