@@ -25,18 +25,42 @@ class AuthNotifier extends ChangeNotifier {
   bool get isLoggedIn => _isLoggedIn;
 
   Future<void> _init() async {
-    final token = await _storage.read(key: AppConstants.kAccessToken);
-    _isLoggedIn = token != null;
+    final token   = await _storage.read(key: AppConstants.kAccessToken);
+    final refresh = await _storage.read(key: AppConstants.kRefreshToken);
+    final userId  = await _storage.read(key: AppConstants.kUserId);
+    final name    = await _storage.read(key: AppConstants.kUserName);
+    final role    = await _storage.read(key: AppConstants.kUserRole);
+    final mobile  = await _storage.read(key: AppConstants.kUserMobile);
+
+    if (token != null && userId != null && name != null && role != null) {
+      // Restore TokenStore from storage on app restart
+      if (refresh != null) TokenStore.set(token, refresh);
+      TokenStore.setProfile(
+        id:         int.parse(userId),
+        userName:   name,
+        userRole:   role,
+        userMobile: mobile ?? '',
+      );
+      _isLoggedIn = true;
+    } else {
+      _isLoggedIn = false;
+    }
     notifyListeners();
   }
 
-  /// Called after successful login — increment session key first
-  /// so ALL providers reload fresh data for the new user
+  /// Called after successful login
+  /// TokenStore.setProfile() is already called inside auth_repository.login()
+  /// so profile is guaranteed to be in memory before this runs
   Future<void> setLoggedIn(bool value) async {
     if (value) {
-      // Small delay ensures TokenStore.setProfile() is fully complete
-      // before providers re-run on sessionKey change
-      await Future.delayed(const Duration(milliseconds: 100));
+      // Verify TokenStore has profile before navigating
+      // If not ready (shouldn't happen), wait up to 500ms
+      int attempts = 0;
+      while (!TokenStore.hasProfile && attempts < 5) {
+        await Future.delayed(const Duration(milliseconds: 100));
+        attempts++;
+      }
+      // Bust all provider caches so they reload for the new user
       _ref.read(sessionKeyProvider.notifier).state++;
     }
     _isLoggedIn = value;
@@ -45,8 +69,11 @@ class AuthNotifier extends ChangeNotifier {
 
   /// Called on logout
   Future<void> logout() async {
-    TokenStore.clear();          // clear profile + tokens from memory
-    await _storage.deleteAll();  // clear from storage
+    // Clear memory FIRST before anything else
+    TokenStore.clear();
+    // Then clear storage
+    await _storage.deleteAll();
+    // Bust all provider caches
     _ref.read(sessionKeyProvider.notifier).state++;
     _isLoggedIn = false;
     notifyListeners();

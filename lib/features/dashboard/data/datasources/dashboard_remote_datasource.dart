@@ -12,11 +12,11 @@ class DashboardRemoteDatasource {
 
   DashboardRemoteDatasource(this._client);
 
-  /// Build UserProfile — reads from TokenStore (set during login)
-  /// Retries up to 3 times with 300ms delay if profile not ready yet
+  /// Build UserProfile from TokenStore (set during login)
+  /// Retries up to 5 times with 200ms delay if not ready
   Future<UserProfile> getMe() async {
-    // Try TokenStore first (set synchronously during login)
-    for (int attempt = 0; attempt < 3; attempt++) {
+    // Try TokenStore first (always set before navigation)
+    for (int i = 0; i < 5; i++) {
       if (TokenStore.hasProfile) {
         return UserProfile(
           userId:   TokenStore.userId!,
@@ -27,10 +27,7 @@ class DashboardRemoteDatasource {
           isActive: true,
         );
       }
-      // Wait a bit and retry — login storage write may still be in progress
-      if (attempt < 2) {
-        await Future.delayed(const Duration(milliseconds: 300));
-      }
+      await Future.delayed(const Duration(milliseconds: 200));
     }
 
     // Fallback: read from storage (app restart case)
@@ -44,7 +41,6 @@ class DashboardRemoteDatasource {
         throw ApiException(message: 'Session expired. Please login again.');
       }
 
-      // Populate TokenStore for future calls
       TokenStore.setProfile(
         id:         int.parse(userId),
         userName:   name,
