@@ -66,18 +66,21 @@ class _PayNowScreenState extends ConsumerState<PayNowScreen> {
       }
     });
 
-    if (_step == 2) return _SuccessView(onDone: () {
+    if (_step == 2) return _SuccessView(onDone: () async {
       ref.read(submitPaymentProvider.notifier).reset();
+      // Invalidate and WAIT for providers to refetch before going back to step 0
+      // This ensures pendingBillIds is populated before the bill list renders
       ref.invalidate(myPaymentsProvider);
       ref.invalidate(myBillsProvider);
-      // Reset to step 0 instead of Navigator.pop
-      // (popping causes blank screen when screen is embedded in AppShell)
-      setState(() {
-        _step           = 0;
-        _selectedBillId = null;
-        _selectedAmount = 0;
-        _utrCtr.clear();
-      });
+      await Future.delayed(const Duration(milliseconds: 600));
+      if (mounted) {
+        setState(() {
+          _step           = 0;
+          _selectedBillId = null;
+          _selectedAmount = 0;
+          _utrCtr.clear();
+        });
+      }
     });
 
     return Scaffold(
