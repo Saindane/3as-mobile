@@ -92,42 +92,104 @@ class _PayNowScreenState extends ConsumerState<PayNowScreen> {
             loading: () => const Center(child: CircularProgressIndicator()),
             error:   (e, _) => Text('Error: $e'),
             data: (bills) {
-              final unpaid = bills.where((b) => !b.isPaid && !b.isWaived).toList();
-              if (unpaid.isEmpty) {
+              if (bills.isEmpty) {
+                return const AppCard(child: Padding(
+                  padding: EdgeInsets.all(20),
+                  child: Column(children: [
+                    Icon(Icons.receipt_long_outlined, color: AppColors.textMuted, size: 40),
+                    SizedBox(height: 8),
+                    Text('No bills found', style: TextStyle(fontWeight: FontWeight.w600)),
+                  ]),
+                ));
+              }
+
+              // Get IDs of bills that already have a pending payment submitted
+              final myPaymentsAsync = ref.watch(myPaymentsProvider);
+              final pendingBillIds = myPaymentsAsync.whenData((payments) =>
+                payments.where((p) => p.status.toUpperCase() == 'PENDING')
+                        .map((p) => p.billId).toSet()
+              ).valueOrNull ?? <int>{};
+
+              if (bills.every((b) => b.isPaid || b.isWaived)) {
                 return const AppCard(child: Padding(
                   padding: EdgeInsets.all(20),
                   child: Column(children: [
                     Icon(Icons.check_circle_outline, color: AppColors.success, size: 40),
                     SizedBox(height: 8),
-                    Text('All bills are paid!', style: TextStyle(fontWeight: FontWeight.w600)),
+                    Text('All bills are paid!',
+                        style: TextStyle(fontWeight: FontWeight.w600)),
                   ]),
                 ));
               }
-              return Column(children: unpaid.map((bill) => Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: AppCard(
-                  borderColor: bill.isOverdue ? AppColors.error.withOpacity(.4) : null,
-                  onTap: () => setState(() {
-                    _selectedBillId = bill.billId;
-                    _selectedAmount = bill.total;
-                    _step = 1;
-                  }),
-                  child: Row(children: [
-                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text('${bill.monthName} ${bill.year}', style: AppTextStyles.bodyBold),
-                      Text('₹${bill.total.toStringAsFixed(0)} due',
-                          style: AppTextStyles.caption.copyWith(
-                            color: bill.isOverdue ? AppColors.error : AppColors.textSecondary)),
-                    ])),
-                    AppBadge(
-                      label: bill.status[0].toUpperCase() + bill.status.substring(1),
-                      color: bill.isOverdue ? AppColors.error : AppColors.warning,
-                    ),
-                    const SizedBox(width: 6),
-                    const Icon(Icons.chevron_right, color: AppColors.textMuted),
-                  ]),
-                ),
-              )).toList());
+
+              return Column(children: bills.map((bill) {
+                final hasPendingPayment = pendingBillIds.contains(bill.billId);
+                final isSettled = bill.isPaid || bill.isWaived;
+                final canPay = !isSettled && !hasPendingPayment;
+
+                final badgeColor = isSettled
+                    ? AppColors.success
+                    : hasPendingPayment
+                        ? AppColors.warning
+                        : bill.isOverdue
+                            ? AppColors.error
+                            : AppColors.warning;
+
+                final badgeLabel = isSettled
+                    ? 'Paid'
+                    : hasPendingPayment
+                        ? 'Verifying'
+                        : bill.isOverdue
+                            ? 'Overdue'
+                            : 'Pending';
+
+                final subText = isSettled
+                    ? 'Payment confirmed'
+                    : hasPendingPayment
+                        ? 'Submitted — awaiting verification'
+                        : '₹${bill.total.toStringAsFixed(0)} due';
+
+                final subColor = isSettled
+                    ? AppColors.success
+                    : hasPendingPayment
+                        ? AppColors.warning
+                        : bill.isOverdue
+                            ? AppColors.error
+                            : AppColors.textSecondary;
+
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: AppCard(
+                    borderColor: isSettled
+                        ? AppColors.success.withOpacity(.3)
+                        : hasPendingPayment
+                            ? AppColors.warning.withOpacity(.3)
+                            : bill.isOverdue
+                                ? AppColors.error.withOpacity(.4)
+                                : null,
+                    onTap: canPay ? () => setState(() {
+                      _selectedBillId = bill.billId;
+                      _selectedAmount = bill.total;
+                      _step = 1;
+                    }) : null,
+                    child: Row(children: [
+                      Expanded(child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text('${bill.monthName} ${bill.year}',
+                            style: AppTextStyles.bodyBold),
+                        const SizedBox(height: 2),
+                        Text(subText, style: AppTextStyles.caption.copyWith(color: subColor)),
+                      ])),
+                      AppBadge(label: badgeLabel, color: badgeColor),
+                      const SizedBox(width: 6),
+                      if (canPay)
+                        const Icon(Icons.chevron_right, color: AppColors.textMuted)
+                      else
+                        const SizedBox(width: 20),
+                    ]),
+                  ),
+                );
+              }).toList());
             },
           ),
         ],
