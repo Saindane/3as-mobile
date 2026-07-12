@@ -12,6 +12,10 @@ final allBillsProvider = FutureProvider.family<List<BillModel>,
     ref.watch(billRepositoryProvider).getAllBills(
       month: params.month, year: params.year, status: params.status));
 
+// ── Single bill by ID ────────────────────────────────────────────
+final billByIdProvider = FutureProvider.family<BillModel, int>((ref, billId) =>
+    ref.watch(billRepositoryProvider).getBill(billId));
+
 // ── Collection summary ────────────────────────────────────────────
 final collectionSummaryProvider =
     FutureProvider.family<CollectionSummary, ({int month, int year})>(

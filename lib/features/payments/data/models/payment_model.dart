@@ -39,7 +39,7 @@ class PaymentModel {
         unitNo:     j['unit_no']     as String?,
       );
 
-  bool get isPending  => status == 'pending';
-  bool get isVerified => status == 'verified';
-  bool get isRejected => status == 'rejected';
+  bool get isPending  => status.toUpperCase() == 'PENDING';
+  bool get isVerified => status.toUpperCase() == 'VERIFIED';
+  bool get isRejected => status.toUpperCase() == 'REJECTED';
 }

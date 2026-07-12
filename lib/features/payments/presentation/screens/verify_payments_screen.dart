@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../shared/widgets/stat_card.dart';
 import '../providers/payment_provider.dart';
+import '../../../bills/presentation/providers/bill_provider.dart';
+import '../../../dashboard/presentation/providers/dashboard_provider.dart';
 
 class VerifyPaymentsScreen extends ConsumerWidget {
   const VerifyPaymentsScreen({super.key});
@@ -34,7 +36,12 @@ class VerifyPaymentsScreen extends ConsumerWidget {
               onVerify: (action) async {
                 await ref.read(verifyPaymentProvider.notifier)
                     .verify(payments[i].paymentId, action);
+                // Invalidate all affected providers so resident sees updated status
                 ref.invalidate(pendingPaymentsProvider);
+                ref.invalidate(myPaymentsProvider);
+                ref.invalidate(myBillsProvider);
+                ref.invalidate(allBillsProvider);
+                ref.invalidate(dashboardStatsProvider);
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                     content: Text(action == 'verify'

@@ -18,6 +18,7 @@ class ApiEndpoints {
 
   // Bills
   static const String bills         = '/bills';
+  static const String myBills        = '/bills/my';
   static const String generateBills = '/bills/generate';
 
   // Payments

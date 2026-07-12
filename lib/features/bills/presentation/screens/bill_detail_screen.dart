@@ -12,19 +12,25 @@ class BillDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Find bill from cached list or fetch individually
-    final myBillsAsync = ref.watch(myBillsProvider);
+    // Fetch bill directly by ID — works for both admin and resident
+    final billAsync = ref.watch(billByIdProvider(billId));
 
-    return myBillsAsync.when(
+    return billAsync.when(
       loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
-      error:   (e, _) => Scaffold(body: Center(child: Text('Error: $e'))),
-      data: (bills) {
-        final bill = bills.firstWhere(
-          (b) => b.billId == billId,
-          orElse: () => bills.first,
-        );
-        return _BillDetailView(bill: bill);
-      },
+      error:   (e, _) => Scaffold(body: Center(child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const Icon(Icons.error_outline, size: 40, color: AppColors.error),
+          const SizedBox(height: 10),
+          Text(e.toString(), textAlign: TextAlign.center),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: () => ref.invalidate(billByIdProvider(billId)),
+            child: const Text('Retry'),
+          ),
+        ]),
+      ))),
+      data: (bill) => _BillDetailView(bill: bill),
     );
   }
 }
@@ -33,10 +39,10 @@ class _BillDetailView extends StatelessWidget {
   final BillModel bill;
   const _BillDetailView({required this.bill});
 
-  Color get _statusColor => switch (bill.status) {
-        'paid'    => AppColors.success,
-        'overdue' => AppColors.error,
-        'waived'  => AppColors.textMuted,
+  Color get _statusColor => switch (bill.status.toUpperCase()) {
+        'PAID'    => AppColors.success,
+        'OVERDUE' => AppColors.error,
+        'WAIVED'  => AppColors.textMuted,
         _         => AppColors.warning,
       };
 

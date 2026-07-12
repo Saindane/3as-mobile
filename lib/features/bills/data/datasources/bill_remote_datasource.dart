@@ -10,7 +10,7 @@ class BillRemoteDatasource {
 
   Future<List<BillModel>> getMyBills() async {
     try {
-      final res = await _client.get(ApiEndpoints.bills);
+      final res = await _client.get(ApiEndpoints.myBills);
       final items = res.data['items'] as List;
       return items.map((j) => BillModel.fromJson(j as Map<String, dynamic>)).toList();
     } on DioException catch (e) {

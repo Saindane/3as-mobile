@@ -9,17 +9,17 @@ class BillCard extends StatelessWidget {
 
   const BillCard({super.key, required this.bill, this.onTap});
 
-  Color get _statusColor => switch (bill.status) {
-        'paid'    => AppColors.success,
-        'overdue' => AppColors.error,
-        'waived'  => AppColors.textMuted,
+  Color get _statusColor => switch (bill.status.toUpperCase()) {
+        'PAID'    => AppColors.success,
+        'OVERDUE' => AppColors.error,
+        'WAIVED'  => AppColors.textMuted,
         _         => AppColors.warning,
       };
 
-  IconData get _statusIcon => switch (bill.status) {
-        'paid'    => Icons.check_circle_outline,
-        'overdue' => Icons.warning_amber_outlined,
-        'waived'  => Icons.do_disturb_alt_outlined,
+  IconData get _statusIcon => switch (bill.status.toUpperCase()) {
+        'PAID'    => Icons.check_circle_outline,
+        'OVERDUE' => Icons.warning_amber_outlined,
+        'WAIVED'  => Icons.do_disturb_alt_outlined,
         _         => Icons.pending_outlined,
       };
 
@@ -46,7 +46,7 @@ class BillCard extends StatelessWidget {
               Text('Unit ${bill.unitNo}', style: AppTextStyles.caption),
           ])),
           AppBadge(
-            label: bill.status[0].toUpperCase() + bill.status.substring(1),
+            label: bill.status[0].toUpperCase() + bill.status.substring(1).toLowerCase(),
             color: _statusColor,
           ),
         ]),

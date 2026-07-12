@@ -66,11 +66,21 @@ class _PayNowScreenState extends ConsumerState<PayNowScreen> {
       }
     });
 
-    if (_step == 2) return _SuccessView(onDone: () {
+    if (_step == 2) return _SuccessView(onDone: () async {
       ref.read(submitPaymentProvider.notifier).reset();
+      // Invalidate and WAIT for providers to refetch before going back to step 0
+      // This ensures pendingBillIds is populated before the bill list renders
       ref.invalidate(myPaymentsProvider);
       ref.invalidate(myBillsProvider);
-      Navigator.pop(context);
+      await Future.delayed(const Duration(milliseconds: 600));
+      if (mounted) {
+        setState(() {
+          _step           = 0;
+          _selectedBillId = null;
+          _selectedAmount = 0;
+          _utrCtr.clear();
+        });
+      }
     });
 
     return Scaffold(
@@ -85,42 +95,149 @@ class _PayNowScreenState extends ConsumerState<PayNowScreen> {
             loading: () => const Center(child: CircularProgressIndicator()),
             error:   (e, _) => Text('Error: $e'),
             data: (bills) {
-              final unpaid = bills.where((b) => !b.isPaid && !b.isWaived).toList();
-              if (unpaid.isEmpty) {
+              if (bills.isEmpty) {
+                return const AppCard(child: Padding(
+                  padding: EdgeInsets.all(20),
+                  child: Column(children: [
+                    Icon(Icons.receipt_long_outlined, color: AppColors.textMuted, size: 40),
+                    SizedBox(height: 8),
+                    Text('No bills found', style: TextStyle(fontWeight: FontWeight.w600)),
+                  ]),
+                ));
+              }
+
+              // Get IDs of bills that already have a pending payment submitted
+              final myPaymentsAsync = ref.watch(myPaymentsProvider);
+              final pendingBillIds = myPaymentsAsync.whenData((payments) =>
+                payments.where((p) => p.status.toUpperCase() == 'PENDING')
+                        .map((p) => p.billId).toSet()
+              ).valueOrNull ?? <int>{};
+
+              if (bills.every((b) => b.isPaid || b.isWaived)) {
                 return const AppCard(child: Padding(
                   padding: EdgeInsets.all(20),
                   child: Column(children: [
                     Icon(Icons.check_circle_outline, color: AppColors.success, size: 40),
                     SizedBox(height: 8),
-                    Text('All bills are paid!', style: TextStyle(fontWeight: FontWeight.w600)),
+                    Text('All bills are paid!',
+                        style: TextStyle(fontWeight: FontWeight.w600)),
                   ]),
                 ));
               }
-              return Column(children: unpaid.map((bill) => Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: AppCard(
-                  borderColor: bill.isOverdue ? AppColors.error.withOpacity(.4) : null,
-                  onTap: () => setState(() {
-                    _selectedBillId = bill.billId;
-                    _selectedAmount = bill.total;
-                    _step = 1;
-                  }),
-                  child: Row(children: [
-                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text('${bill.monthName} ${bill.year}', style: AppTextStyles.bodyBold),
-                      Text('₹${bill.total.toStringAsFixed(0)} due',
-                          style: AppTextStyles.caption.copyWith(
-                            color: bill.isOverdue ? AppColors.error : AppColors.textSecondary)),
-                    ])),
-                    AppBadge(
-                      label: bill.status[0].toUpperCase() + bill.status.substring(1),
-                      color: bill.isOverdue ? AppColors.error : AppColors.warning,
-                    ),
-                    const SizedBox(width: 6),
-                    const Icon(Icons.chevron_right, color: AppColors.textMuted),
-                  ]),
-                ),
-              )).toList());
+
+              return Column(children: bills.map((bill) {
+                final hasPendingPayment = pendingBillIds.contains(bill.billId);
+                final isSettled = bill.isPaid || bill.isWaived;
+                final canPay = !isSettled && !hasPendingPayment;
+
+                final badgeColor = isSettled
+                    ? AppColors.success
+                    : hasPendingPayment
+                        ? AppColors.warning
+                        : bill.isOverdue
+                            ? AppColors.error
+                            : AppColors.warning;
+
+                final badgeLabel = isSettled
+                    ? 'Paid'
+                    : hasPendingPayment
+                        ? 'Verifying'
+                        : bill.isOverdue
+                            ? 'Overdue'
+                            : 'Pending';
+
+                final subText = isSettled
+                    ? 'Payment confirmed'
+                    : hasPendingPayment
+                        ? 'Submitted — awaiting verification'
+                        : '₹${bill.total.toStringAsFixed(0)} due';
+
+                final subColor = isSettled
+                    ? AppColors.success
+                    : hasPendingPayment
+                        ? AppColors.warning
+                        : bill.isOverdue
+                            ? AppColors.error
+                            : AppColors.textSecondary;
+
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: AppCard(
+                    borderColor: isSettled
+                        ? AppColors.success.withOpacity(.3)
+                        : hasPendingPayment
+                            ? AppColors.warning.withOpacity(.3)
+                            : bill.isOverdue
+                                ? AppColors.error.withOpacity(.4)
+                                : null,
+                    onTap: canPay
+                        ? () => setState(() {
+                            _selectedBillId = bill.billId;
+                            _selectedAmount = bill.total;
+                            _step = 1;
+                          })
+                        : hasPendingPayment
+                            ? () {
+                                // Show payment details - UTR already submitted
+                                final payment = myPaymentsAsync.valueOrNull
+                                    ?.firstWhere((p) => p.billId == bill.billId,
+                                        orElse: () => myPaymentsAsync.valueOrNull!.first);
+                                if (payment != null) {
+                                  showDialog(context: context, builder: (_) =>
+                                    AlertDialog(
+                                      title: const Text('Payment submitted'),
+                                      content: Column(mainAxisSize: MainAxisSize.min, children: [
+                                        const Icon(Icons.pending_outlined,
+                                            size: 48, color: AppColors.warning),
+                                        const SizedBox(height: 12),
+                                        _PaymentDetailRow(label: 'Bill', value: '${bill.monthName} ${bill.year}'),
+                                        _PaymentDetailRow(label: 'Amount', value: '₹${payment.amount.toStringAsFixed(0)}'),
+                                        _PaymentDetailRow(label: 'UTR / Ref No', value: payment.utr ?? '-'),
+                                        _PaymentDetailRow(label: 'Mode', value: payment.mode),
+                                        _PaymentDetailRow(label: 'Status', value: 'Awaiting verification'),
+                                        const SizedBox(height: 8),
+                                        Container(
+                                          padding: const EdgeInsets.all(10),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.warningLight,
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: const Text(
+                                            'Management will verify your payment within 24 hours.',
+                                            textAlign: TextAlign.center,
+                                            style: TextStyle(fontSize: 12, color: AppColors.warning),
+                                          ),
+                                        ),
+                                      ]),
+                                      actions: [
+                                        ElevatedButton(
+                                          onPressed: () => Navigator.pop(context),
+                                          child: const Text('Close'),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }
+                              }
+                            : null,
+                    child: Row(children: [
+                      Expanded(child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text('${bill.monthName} ${bill.year}',
+                            style: AppTextStyles.bodyBold),
+                        const SizedBox(height: 2),
+                        Text(subText, style: AppTextStyles.caption.copyWith(color: subColor)),
+                      ])),
+                      AppBadge(label: badgeLabel, color: badgeColor),
+                      const SizedBox(width: 6),
+                      if (canPay)
+                        const Icon(Icons.chevron_right, color: AppColors.textMuted)
+                      else
+                        const SizedBox(width: 20),
+                    ]),
+                  ),
+                );
+              }).toList());
             },
           ),
         ],
@@ -322,4 +439,24 @@ class _Arrow extends StatelessWidget {
   Widget build(BuildContext context) =>
       const Padding(padding: EdgeInsets.symmetric(horizontal: 4),
           child: Icon(Icons.chevron_right, size: 16, color: AppColors.textMuted));
+}
+
+class _PaymentDetailRow extends StatelessWidget {
+  final String label, value;
+  const _PaymentDetailRow({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 5),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: const TextStyle(
+            fontSize: 13, color: AppColors.textMuted)),
+        Flexible(child: Text(value, textAlign: TextAlign.end,
+            style: const TextStyle(
+                fontSize: 13, fontWeight: FontWeight.w600))),
+      ],
+    ),
+  );
 }

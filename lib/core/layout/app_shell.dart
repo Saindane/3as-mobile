@@ -6,6 +6,8 @@ import '../theme/app_theme.dart';
 import '../layout/responsive.dart';
 import '../../features/auth/data/repositories/auth_repository_impl.dart';
 import '../router/app_router.dart';
+import '../../features/notices/presentation/providers/notice_provider.dart';
+import '../../features/notices/data/models/notice_model.dart';
 import '../../features/dashboard/presentation/providers/dashboard_provider.dart';
 
 class NavItem {
@@ -77,6 +79,7 @@ class AppShell extends ConsumerStatefulWidget {
 
 class _AppShellState extends ConsumerState<AppShell> {
   int _selectedIndex = 0;
+  bool _hasUnread = true; // shows red dot until user opens notifications
 
   List<NavItem> get _navItems =>
       widget.userRole.toUpperCase() == 'ADMIN' ? _adminNav
@@ -230,12 +233,13 @@ class _AppShellState extends ConsumerState<AppShell> {
                   IconButton(
                     icon: const Icon(Icons.notifications_outlined,
                         color: AppColors.textSecondary),
-                    onPressed: () {},
+                    onPressed: () => _showNotifications(context),
                   ),
-                  Positioned(top: 8, right: 8,
-                    child: Container(width: 8, height: 8,
-                        decoration: const BoxDecoration(
-                            color: AppColors.error, shape: BoxShape.circle))),
+                  if (_hasUnread)
+                    Positioned(top: 8, right: 8,
+                      child: Container(width: 8, height: 8,
+                          decoration: const BoxDecoration(
+                              color: AppColors.error, shape: BoxShape.circle))),
                 ]),
               ]),
             ),
@@ -275,7 +279,7 @@ class _AppShellState extends ConsumerState<AppShell> {
                     fontWeight: FontWeight.w600)),
           ),
           Stack(children: [
-            IconButton(icon: const Icon(Icons.notifications_outlined), onPressed: () {}),
+            IconButton(icon: const Icon(Icons.notifications_outlined), onPressed: () => _showNotifications(context)),
             Positioned(top: 8, right: 8,
               child: Container(width: 8, height: 8,
                   decoration: const BoxDecoration(
@@ -298,6 +302,18 @@ class _AppShellState extends ConsumerState<AppShell> {
           label:      item.label,
         )).toList(),
       ),
+    );
+  }
+
+  void _showNotifications(BuildContext context) {
+    setState(() => _hasUnread = false); // clear red dot
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (_) => const _NotificationsSheet(),
     );
   }
 
@@ -372,4 +388,170 @@ class _RoleBtn extends StatelessWidget {
       color: active ? AppColors.primary : AppColors.textMuted,
     )),
   );
+}
+
+// ── Notifications sheet ───────────────────────────────────────────
+class _NotificationsSheet extends ConsumerWidget {
+  const _NotificationsSheet();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final noticesAsync = ref.watch(noticesProvider);
+
+    return DraggableScrollableSheet(
+      initialChildSize: 0.5,
+      minChildSize: 0.3,
+      maxChildSize: 0.85,
+      expand: false,
+      builder: (_, controller) => Column(
+        children: [
+          // Handle
+          Container(
+            margin: const EdgeInsets.only(top: 10, bottom: 6),
+            width: 36, height: 4,
+            decoration: BoxDecoration(
+              color: AppColors.border,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          // Header
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+            child: Row(
+              children: [
+                const Icon(Icons.notifications_outlined,
+                    color: AppColors.primary, size: 22),
+                const SizedBox(width: 8),
+                Text('Notices', style: AppTextStyles.heading3),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.close, size: 20),
+                  onPressed: () => Navigator.pop(context),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+          // Content
+          Expanded(
+            child: noticesAsync.when(
+              loading: () =>
+                  const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(mainAxisSize: MainAxisSize.min, children: [
+                    const Icon(Icons.error_outline,
+                        size: 36, color: AppColors.error),
+                    const SizedBox(height: 8),
+                    Text(e.toString(), textAlign: TextAlign.center,
+                        style: AppTextStyles.body),
+                  ]),
+                ),
+              ),
+              data: (notices) {
+                if (notices.isEmpty) {
+                  return const Center(
+                    child: Column(mainAxisSize: MainAxisSize.min, children: [
+                      Icon(Icons.notifications_none_outlined,
+                          size: 48, color: AppColors.textMuted),
+                      SizedBox(height: 10),
+                      Text('No notices yet',
+                          style: TextStyle(
+                              color: AppColors.textMuted,
+                              fontWeight: FontWeight.w600)),
+                    ]),
+                  );
+                }
+                return ListView.separated(
+                  controller: controller,
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 8),
+                  itemCount: notices.length,
+                  separatorBuilder: (_, __) => const Divider(height: 1),
+                  itemBuilder: (_, i) => _NoticeItem(notice: notices[i]),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NoticeItem extends StatelessWidget {
+  final NoticeModel notice;
+  const _NoticeItem({required this.notice});
+
+  Color get _priorityColor => switch (notice.priority.toLowerCase()) {
+        'urgent' => AppColors.error,
+        'high'   => AppColors.warning,
+        _        => AppColors.primary,
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 36, height: 36,
+            decoration: BoxDecoration(
+              color: _priorityColor.withOpacity(.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(Icons.campaign_outlined,
+                color: _priorityColor, size: 18),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(notice.title,
+                    style: AppTextStyles.bodyBold
+                        .copyWith(fontSize: 13)),
+                const SizedBox(height: 3),
+                Text(notice.body,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.caption),
+                const SizedBox(height: 4),
+                Row(children: [
+                  if (notice.authorName != null) ...[
+                    Text(notice.authorName!,
+                        style: AppTextStyles.caption
+                            .copyWith(color: AppColors.primary)),
+                    const Text(' · ',
+                        style: TextStyle(color: AppColors.textMuted)),
+                  ],
+                  Text(_formatDate(notice.createdAt),
+                      style: AppTextStyles.caption),
+                ]),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatDate(String iso) {
+    try {
+      final dt  = DateTime.parse(iso);
+      final now = DateTime.now();
+      final diff = now.difference(dt);
+      if (diff.inDays == 0)    return 'Today';
+      if (diff.inDays == 1)    return 'Yesterday';
+      if (diff.inDays < 7)     return '${diff.inDays}d ago';
+      return '${dt.day}/${dt.month}/${dt.year}';
+    } catch (_) {
+      return iso.length >= 10 ? iso.substring(0, 10) : iso;
+    }
+  }
 }

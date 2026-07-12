@@ -8,23 +8,26 @@ import '../../../bills/presentation/providers/bill_provider.dart';
 import '../../../bills/data/models/bill_model.dart';
 import '../../../complaints/presentation/providers/complaint_provider.dart';
 import '../../../notices/presentation/providers/notice_provider.dart';
+import '../../../payments/presentation/providers/payment_provider.dart';
 
 class ResidentDashboardScreen extends ConsumerWidget {
   const ResidentDashboardScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final profileAsync   = ref.watch(userProfileProvider);
-    final propAsync      = ref.watch(myPropertyProvider);
-    final billsAsync     = ref.watch(myBillsProvider);
+    final profileAsync    = ref.watch(userProfileProvider);
+    final propAsync       = ref.watch(myPropertyProvider);
+    final billsAsync      = ref.watch(myBillsProvider);
+    final paymentsAsync   = ref.watch(myPaymentsProvider);
     final complaintsAsync = ref.watch(complaintsProvider);
-    final noticesAsync   = ref.watch(noticesProvider);
+    final noticesAsync    = ref.watch(noticesProvider);
 
     return RefreshIndicator(
       onRefresh: () async {
         ref.invalidate(userProfileProvider);
         ref.invalidate(myPropertyProvider);
         ref.invalidate(myBillsProvider);
+        ref.invalidate(myPaymentsProvider);
         ref.invalidate(complaintsProvider);
         ref.invalidate(noticesProvider);
       },
@@ -150,48 +153,73 @@ class ResidentDashboardScreen extends ConsumerWidget {
             loading: () => const SizedBox(),
             error:   (_, __) => const SizedBox(),
             data: (bills) {
-              final pending = bills.where((b) =>
-                  b.status.toUpperCase() == 'PENDING' ||
-                  b.status.toUpperCase() == 'OVERDUE').toList();
-              if (pending.isEmpty) return const SizedBox();
+              // Get submitted payment bill IDs
+              final pendingPaymentBillIds = paymentsAsync.whenData((payments) =>
+                payments.where((p) => p.status.toUpperCase() == 'PENDING')
+                        .map((p) => p.billId).toSet()
+              ).valueOrNull ?? <int>{};
+
+              final unpaid = bills.where((b) => !b.isPaid && !b.isWaived).toList();
+              if (unpaid.isEmpty) return const SizedBox();
 
               return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const SectionHeader(title: 'Pending bills'),
+                const SectionHeader(title: 'Bills'),
                 const SizedBox(height: 10),
-                ...pending.map((bill) => Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: AppCard(
-                    borderColor: bill.status.toUpperCase() == 'OVERDUE'
-                        ? AppColors.error : AppColors.warning,
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                        Text('${_monthName(bill.month)} ${bill.year}',
-                            style: AppTextStyles.bodyBold),
-                        AppBadge(
-                          label: bill.status[0].toUpperCase() +
-                              bill.status.substring(1).toLowerCase(),
-                          color: bill.status.toUpperCase() == 'OVERDUE'
-                              ? AppColors.error : AppColors.warning,
-                        ),
-                      ]),
-                      const SizedBox(height: 8),
-                      Row(children: [
-                        Expanded(child: _MiniStat(
-                            label: 'Maintenance',
-                            value: '₹${bill.maintenance.toStringAsFixed(0)}')),
-                        if (bill.penalty > 0)
+                ...unpaid.map((bill) {
+                  final hasSubmitted = pendingPaymentBillIds.contains(bill.billId);
+                  final badgeLabel = hasSubmitted ? 'Verifying'
+                      : bill.status.toUpperCase() == 'OVERDUE' ? 'Overdue' : 'Pending';
+                  final badgeColor = hasSubmitted ? AppColors.warning
+                      : bill.status.toUpperCase() == 'OVERDUE'
+                          ? AppColors.error : AppColors.warning;
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: AppCard(
+                      borderColor: badgeColor,
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                          Text('${_monthName(bill.month)} ${bill.year}',
+                              style: AppTextStyles.bodyBold),
+                          AppBadge(label: badgeLabel, color: badgeColor),
+                        ]),
+                        const SizedBox(height: 8),
+                        Row(children: [
                           Expanded(child: _MiniStat(
-                              label: 'Penalty',
-                              value: '₹${bill.penalty.toStringAsFixed(0)}',
+                              label: 'Maintenance',
+                              value: '₹${bill.maintenance.toStringAsFixed(0)}')),
+                          if (bill.penalty > 0)
+                            Expanded(child: _MiniStat(
+                                label: 'Penalty',
+                                value: '₹${bill.penalty.toStringAsFixed(0)}',
+                                valueColor: AppColors.error)),
+                          Expanded(child: _MiniStat(
+                              label: 'Total',
+                              value: '₹${bill.total.toStringAsFixed(0)}',
                               valueColor: AppColors.error)),
-                        Expanded(child: _MiniStat(
-                            label: 'Total',
-                            value: '₹${bill.total.toStringAsFixed(0)}',
-                            valueColor: AppColors.error)),
+                        ]),
+                        if (hasSubmitted) ...[
+                          const SizedBox(height: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: AppColors.warning.withOpacity(.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Row(children: [
+                              Icon(Icons.pending_outlined,
+                                  size: 13, color: AppColors.warning),
+                              SizedBox(width: 6),
+                              Text('Payment submitted — awaiting verification',
+                                  style: TextStyle(
+                                      fontSize: 11, color: AppColors.warning)),
+                            ]),
+                          ),
+                        ],
                       ]),
-                    ]),
-                  ),
-                )),
+                    ),
+                  );
+                }).toList(),
               ]);
             },
           ),
