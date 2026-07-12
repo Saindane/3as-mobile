@@ -79,7 +79,11 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
       }
       if (next.error != null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(next.error!), backgroundColor: AppColors.error),
+          SnackBar(
+            content: Text(next.error!),
+            backgroundColor: AppColors.error,
+            duration: const Duration(seconds: 4),
+          ),
         );
         ref.read(otpProvider.notifier).clearError();
       }
