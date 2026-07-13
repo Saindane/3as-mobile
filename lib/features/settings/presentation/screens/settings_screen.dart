@@ -145,6 +145,60 @@ class SettingsScreen extends ConsumerWidget {
 
             const SizedBox(height: 20),
 
+            // ── App Branding ──────────────────────────────────
+            const SectionHeader(title: 'App branding'),
+            const SizedBox(height: 8),
+            AppCard(child: Column(children: [
+              _SettingRow(
+                icon: Icons.title,
+                label: 'App name',
+                value: map['app_name'] ?? '3As Complex',
+                onEdit: () async {
+                  await _editSetting(context, ref, 'app_name',
+                      'App name', map['app_name'] ?? '3As Complex');
+                  ref.invalidate(brandingProvider);
+                },
+              ),
+              const Divider(height: 1),
+              _SettingRow(
+                icon: Icons.subtitles_outlined,
+                label: 'App tagline',
+                value: map['app_tagline'] ?? 'Maintenance Management System',
+                onEdit: () async {
+                  await _editSetting(context, ref, 'app_tagline',
+                      'App tagline',
+                      map['app_tagline'] ?? 'Maintenance Management System');
+                  ref.invalidate(brandingProvider);
+                },
+              ),
+              const Divider(height: 1),
+              _LogoUploadRow(
+                currentBase64: map['app_logo_url'] ?? '',
+                onUploaded: (base64) async {
+                  await _updateSetting(context, ref, 'app_logo_url', base64);
+                  ref.invalidate(brandingProvider);
+                },
+                onRemove: () async {
+                  await _updateSetting(context, ref, 'app_logo_url', '');
+                  ref.invalidate(brandingProvider);
+                },
+              ),
+              const Divider(height: 1),
+              _SettingRow(
+                icon: Icons.color_lens_outlined,
+                label: 'Primary color (hex)',
+                value: map['app_primary_color'] ?? '#2563EB',
+                onEdit: () async {
+                  await _editSetting(context, ref, 'app_primary_color',
+                      'Primary color (e.g. #2563EB)',
+                      map['app_primary_color'] ?? '#2563EB');
+                  ref.invalidate(brandingProvider);
+                },
+              ),
+            ])),
+
+            const SizedBox(height: 20),
+
             // ── Notifications ────────────────────────────────
             const SectionHeader(title: 'Notifications'),
             const SizedBox(height: 8),
