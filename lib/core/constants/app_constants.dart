@@ -14,8 +14,8 @@ class AppConstants {
     // For physical device use your machine's local IP e.g.: http://192.168.1.5:8000/api/v1
   }
 
-  static const int connectTimeout = 15000; // ms
-  static const int receiveTimeout = 15000;
+  static const int connectTimeout = 30000; // ms
+  static const int receiveTimeout = 30000;  // increased for logo upload
 
   // ── Storage keys ───────────────────────────────────────
   static const String kAccessToken  = 'access_token';

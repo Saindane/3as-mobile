@@ -360,21 +360,18 @@ class _LogoUploadRow extends StatelessWidget {
       final picker = ImagePicker();
       final XFile? file = await picker.pickImage(
         source: ImageSource.gallery,
-        maxWidth:  256,
-        maxHeight: 256,
-        imageQuality: 85,
+        maxWidth:  128,
+        maxHeight: 128,
+        imageQuality: 60,
       );
       if (file == null) return;
 
       final bytes = await file.readAsBytes();
-      final ext = file.name.split('.').last.toLowerCase();
-      final mimeType = ext == 'png' ? 'image/png' : 'image/jpeg';
-      final base64Str = 'data:$mimeType;base64,${base64Encode(bytes)}';
-
-      if (base64Str.length > 500000) {
+      final base64Str = 'data:image/jpeg;base64,${base64Encode(bytes)}';
+      if (base64Str.length > 200000) {
         // ignore: use_build_context_synchronously
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Image too large. Please use an image under 200KB.'),
+          content: Text('Image too large. Use a smaller image (max 100KB).'),
           backgroundColor: AppColors.error,
         ));
         return;
