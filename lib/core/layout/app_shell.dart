@@ -157,13 +157,17 @@ class _AppShellState extends ConsumerState<AppShell> {
                             : const Icon(Icons.apartment, color: Colors.white, size: 20),
                   ),
                   const SizedBox(width: 10),
-                  Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Text(branding.appName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700,
                             color: AppColors.text)),
                     Text(branding.appTagline,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(fontSize: 10, color: AppColors.textMuted)),
-                  ]),
+                  ])),
                 ]),
               );
             }),
