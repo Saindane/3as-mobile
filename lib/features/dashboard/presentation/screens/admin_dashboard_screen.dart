@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../shared/widgets/stat_card.dart';
 import '../providers/dashboard_provider.dart';
+import '../../../../core/providers/nav_index_provider.dart';
 import '../../../complaints/presentation/providers/complaint_provider.dart';
 import '../../../payments/presentation/providers/payment_provider.dart';
 import '../../../bills/presentation/providers/bill_provider.dart';
@@ -74,7 +75,7 @@ class AdminDashboardScreen extends ConsumerWidget {
                 crossAxisCount: 2,
                 crossAxisSpacing: 10,
                 mainAxisSpacing: 10,
-                childAspectRatio: 1.6,
+                childAspectRatio: 2.2,
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 children: [
@@ -170,7 +171,7 @@ class AdminDashboardScreen extends ConsumerWidget {
                 const SizedBox(height: 10),
                 Row(children: [
                   Expanded(child: ElevatedButton(
-                    onPressed: () {},
+                    onPressed: () => ref.read(navIndexProvider.notifier).state = 3,
                     style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 8)),
                     child: const Text('Generate bills',
@@ -178,7 +179,7 @@ class AdminDashboardScreen extends ConsumerWidget {
                   )),
                   const SizedBox(width: 8),
                   Expanded(child: OutlinedButton(
-                    onPressed: () {},
+                    onPressed: () => ref.read(navIndexProvider.notifier).state = 7,
                     style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 8)),
                     child: const Text('View reports',
@@ -428,17 +429,17 @@ class _BigKpiCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => AppCard(
-    padding: const EdgeInsets.all(16),
+    padding: const EdgeInsets.all(12),
     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text(value, style: TextStyle(
-          fontSize: 32, fontWeight: FontWeight.w700, color: valueColor)),
-      const SizedBox(height: 4),
-      Text(label, style: const TextStyle(
-          fontSize: 11, fontWeight: FontWeight.w600,
-          color: AppColors.textMuted, letterSpacing: 0.5)),
+          fontSize: 22, fontWeight: FontWeight.w700, color: valueColor)),
       const SizedBox(height: 2),
+      Text(label, style: const TextStyle(
+          fontSize: 10, fontWeight: FontWeight.w600,
+          color: AppColors.textMuted, letterSpacing: 0.5)),
+      const SizedBox(height: 1),
       Text(sub, style: TextStyle(
-          fontSize: 12, color: valueColor == AppColors.text
+          fontSize: 11, color: valueColor == AppColors.text
               ? AppColors.success : valueColor)),
     ]),
   );

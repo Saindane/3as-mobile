@@ -8,6 +8,7 @@ import '../layout/responsive.dart';
 import '../../features/auth/data/repositories/auth_repository_impl.dart';
 import '../router/app_router.dart';
 import '../providers/branding_provider.dart';
+import '../providers/nav_index_provider.dart';
 import '../../features/notices/presentation/providers/notice_provider.dart';
 import '../../features/notices/data/models/notice_model.dart';
 import '../../features/dashboard/presentation/providers/dashboard_provider.dart';
@@ -109,6 +110,14 @@ class _AppShellState extends ConsumerState<AppShell> {
 
   @override
   Widget build(BuildContext context) {
+    // Listen for programmatic navigation from other screens
+    ref.listen(navIndexProvider, (_, next) {
+      if (next >= 0 && next < widget.pages.length) {
+        setState(() => _selectedIndex = next);
+        ref.read(navIndexProvider.notifier).state = -1; // reset
+      }
+    });
+
     return ResponsiveLayout(
       mobile:  _buildMobileLayout(),
       desktop: _buildDesktopLayout(),
