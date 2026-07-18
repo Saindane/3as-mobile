@@ -357,6 +357,7 @@ class _LogoUploadRow extends StatelessWidget {
 
   Future<void> _pickImage(BuildContext context) async {
     try {
+      // Step 1: Pick image
       final picker = ImagePicker();
       final XFile? file = await picker.pickImage(
         source: ImageSource.gallery,
@@ -364,33 +365,76 @@ class _LogoUploadRow extends StatelessWidget {
         maxHeight: 128,
         imageQuality: 60,
       );
-      if (file == null) return;
+      if (file == null) return; // User cancelled
 
+      // Step 2: Read bytes
       final bytes = await file.readAsBytes();
-      final base64Str = 'data:image/jpeg;base64,${base64Encode(bytes)}';
-      if (base64Str.length > 200000) {
-        // ignore: use_build_context_synchronously
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Image too large. Use a smaller image (max 100KB).'),
-          backgroundColor: AppColors.error,
-        ));
+      if (bytes.isEmpty) {
+        _showError(context, 'Could not read the image. Please try a different file.');
         return;
       }
 
+      // Step 3: Convert to base64
+      final base64Str = 'data:image/jpeg;base64,${base64Encode(bytes)}';
+
+      // Step 4: Check size
+      if (base64Str.length > 200000) {
+        _showError(context,
+            'Image is too large to upload. Please choose a smaller image (under 100KB) and try again.');
+        return;
+      }
+
+      // Step 5: Upload
       await onUploaded(base64Str);
 
       // ignore: use_build_context_synchronously
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Logo updated successfully'),
-        backgroundColor: AppColors.success,
-      ));
-    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Row(children: [
+            Icon(Icons.check_circle, color: Colors.white, size: 18),
+            SizedBox(width: 8),
+            Text('Logo uploaded successfully!'),
+          ]),
+          backgroundColor: AppColors.success,
+          duration: Duration(seconds: 3),
+        ));
+      }
+
+    } on Exception catch (e) {
+      final msg = e.toString().toLowerCase();
+      String friendly;
+
+      if (msg.contains('permission') || msg.contains('denied')) {
+        friendly = 'Permission denied. Please allow photo access and try again.';
+      } else if (msg.contains('network') || msg.contains('connection') ||
+                 msg.contains('socket') || msg.contains('xmlhttp')) {
+        friendly = 'Network error. Please check your connection and try again.';
+      } else if (msg.contains('timeout')) {
+        friendly = 'Upload timed out. Please try again with a smaller image.';
+      } else if (msg.contains('format') || msg.contains('decode') ||
+                 msg.contains('invalid')) {
+        friendly = 'Invalid image format. Please use a JPG or PNG file.';
+      } else if (msg.contains('too large') || msg.contains('size')) {
+        friendly = 'Image is too large. Please choose a smaller image.';
+      } else {
+        friendly = 'Logo upload failed. Please try again.';
+      }
+
       // ignore: use_build_context_synchronously
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Error: $e'),
-        backgroundColor: AppColors.error,
-      ));
+      if (context.mounted) _showError(context, friendly);
     }
+  }
+
+  void _showError(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Icon(Icons.error_outline, color: Colors.white, size: 18),
+        const SizedBox(width: 8),
+        Expanded(child: Text(message)),
+      ]),
+      backgroundColor: AppColors.error,
+      duration: const Duration(seconds: 4),
+    ));
   }
 
   @override
