@@ -160,7 +160,7 @@ class ResidentDashboardScreen extends ConsumerWidget {
                                   ? 'Payment submitted — awaiting verification'
                                   : isOverdue
                                       ? 'Overdue — penalty accruing daily'
-                                      : 'Due by ${bill.dueDate ?? "the 10th"}',
+                                      : bill.dueDate != null ? 'Due by ${bill.dueDate}' : 'Payment pending',
                               style: AppTextStyles.caption.copyWith(
                                 color: hasSubmitted
                                     ? AppColors.warning
@@ -207,7 +207,14 @@ class ResidentDashboardScreen extends ConsumerWidget {
                           SizedBox(
                             width: double.infinity,
                             child: ElevatedButton.icon(
-                              onPressed: () {},
+                              onPressed: () {
+                // Switch to Pay now tab (index 2 for resident)
+                // This is handled by AppShell via bottom nav
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                  content: Text('Tap "Pay now" in the menu to make payment'),
+                  duration: Duration(seconds: 2),
+                ));
+              },
                               icon: const Icon(Icons.payment, size: 16),
                               label: const Text('Pay now'),
                               style: ElevatedButton.styleFrom(
