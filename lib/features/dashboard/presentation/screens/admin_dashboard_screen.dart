@@ -482,8 +482,8 @@ class _CollectionChart extends StatelessWidget {
     for (int i = 0; i < 6; i++) {
       final dt  = DateTime(now.year, now.month - 5 + i);
       final sum = summaries[i].valueOrNull;
-      final pct = sum != null && sum.totalBilled > 0
-          ? (sum.totalCollected / sum.totalBilled).clamp(0.0, 1.0)
+      final pct = sum != null
+          ? sum.collectionPct.clamp(0.0, 1.0)
           : 0.0;
       data.add((
         label: _shortMonth(dt.month),
