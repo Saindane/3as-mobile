@@ -302,7 +302,7 @@ class _AppShellState extends ConsumerState<AppShell> {
             child: const Icon(Icons.apartment, color: Colors.white, size: 15),
           ),
           const SizedBox(width: 8),
-          const Text('3As Complex'),
+          Text(getBranding(ref).appName),
         ]),
         actions: [
           Container(
