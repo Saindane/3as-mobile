@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'package:image_picker/image_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/network/dio_client.dart';
 import '../../../../core/constants/api_endpoints.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/providers/branding_provider.dart';
 import '../../../../shared/widgets/stat_card.dart';
 
 // ── Provider ──────────────────────────────────────────────────────
@@ -137,6 +140,60 @@ class SettingsScreen extends ConsumerWidget {
                 value: map['society_address'] ?? 'Pune, Maharashtra',
                 onEdit: () => _editSetting(context, ref, 'society_address',
                     'Address', map['society_address'] ?? ''),
+              ),
+            ])),
+
+            const SizedBox(height: 20),
+
+            // ── App Branding ──────────────────────────────────
+            const SectionHeader(title: 'App branding'),
+            const SizedBox(height: 8),
+            AppCard(child: Column(children: [
+              _SettingRow(
+                icon: Icons.title,
+                label: 'App name',
+                value: map['app_name'] ?? '3As Complex',
+                onEdit: () async {
+                  await _editSetting(context, ref, 'app_name',
+                      'App name', map['app_name'] ?? '3As Complex');
+                  ref.invalidate(brandingProvider);
+                },
+              ),
+              const Divider(height: 1),
+              _SettingRow(
+                icon: Icons.subtitles_outlined,
+                label: 'App tagline',
+                value: map['app_tagline'] ?? 'Maintenance Management System',
+                onEdit: () async {
+                  await _editSetting(context, ref, 'app_tagline',
+                      'App tagline',
+                      map['app_tagline'] ?? 'Maintenance Management System');
+                  ref.invalidate(brandingProvider);
+                },
+              ),
+              const Divider(height: 1),
+              _LogoUploadRow(
+                currentBase64: map['app_logo_url'] ?? '',
+                onUploaded: (base64) async {
+                  await _updateSetting(context, ref, 'app_logo_url', base64);
+                  ref.invalidate(brandingProvider);
+                },
+                onRemove: () async {
+                  await _updateSetting(context, ref, 'app_logo_url', '');
+                  ref.invalidate(brandingProvider);
+                },
+              ),
+              const Divider(height: 1),
+              _SettingRow(
+                icon: Icons.color_lens_outlined,
+                label: 'Primary color (hex)',
+                value: map['app_primary_color'] ?? '#2563EB',
+                onEdit: () async {
+                  await _editSetting(context, ref, 'app_primary_color',
+                      'Primary color (e.g. #2563EB)',
+                      map['app_primary_color'] ?? '#2563EB');
+                  ref.invalidate(brandingProvider);
+                },
               ),
             ])),
 
@@ -282,4 +339,172 @@ class _SwitchRow extends StatelessWidget {
       ),
     ]),
   );
+}
+
+// ── Logo upload row ───────────────────────────────────────────────
+class _LogoUploadRow extends StatelessWidget {
+  final String currentBase64;
+  final Future<void> Function(String base64) onUploaded;
+  final Future<void> Function() onRemove;
+
+  const _LogoUploadRow({
+    required this.currentBase64,
+    required this.onUploaded,
+    required this.onRemove,
+  });
+
+  bool get _hasLogo => currentBase64.isNotEmpty;
+
+  Future<void> _pickImage(BuildContext context) async {
+    try {
+      // Step 1: Pick image
+      final picker = ImagePicker();
+      final XFile? file = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth:  128,
+        maxHeight: 128,
+        imageQuality: 60,
+      );
+      if (file == null) return; // User cancelled
+
+      // Step 2: Read bytes
+      final bytes = await file.readAsBytes();
+      if (bytes.isEmpty) {
+        _showError(context, 'Could not read the image. Please try a different file.');
+        return;
+      }
+
+      // Step 3: Convert to base64
+      final base64Str = 'data:image/jpeg;base64,${base64Encode(bytes)}';
+
+      // Step 4: Check size
+      if (base64Str.length > 200000) {
+        _showError(context,
+            'Image is too large to upload. Please choose a smaller image (under 100KB) and try again.');
+        return;
+      }
+
+      // Step 5: Upload
+      await onUploaded(base64Str);
+
+      // ignore: use_build_context_synchronously
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Row(children: [
+            Icon(Icons.check_circle, color: Colors.white, size: 18),
+            SizedBox(width: 8),
+            Text('Logo uploaded successfully!'),
+          ]),
+          backgroundColor: AppColors.success,
+          duration: Duration(seconds: 3),
+        ));
+      }
+
+    } on Exception catch (e) {
+      final msg = e.toString().toLowerCase();
+      String friendly;
+
+      if (msg.contains('permission') || msg.contains('denied')) {
+        friendly = 'Permission denied. Please allow photo access and try again.';
+      } else if (msg.contains('network') || msg.contains('connection') ||
+                 msg.contains('socket') || msg.contains('xmlhttp')) {
+        friendly = 'Network error. Please check your connection and try again.';
+      } else if (msg.contains('timeout')) {
+        friendly = 'Upload timed out. Please try again with a smaller image.';
+      } else if (msg.contains('format') || msg.contains('decode') ||
+                 msg.contains('invalid')) {
+        friendly = 'Invalid image format. Please use a JPG or PNG file.';
+      } else if (msg.contains('too large') || msg.contains('size')) {
+        friendly = 'Image is too large. Please choose a smaller image.';
+      } else {
+        friendly = 'Logo upload failed. Please try again.';
+      }
+
+      // ignore: use_build_context_synchronously
+      if (context.mounted) _showError(context, friendly);
+    }
+  }
+
+  void _showError(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Icon(Icons.error_outline, color: Colors.white, size: 18),
+        const SizedBox(width: 8),
+        Expanded(child: Text(message)),
+      ]),
+      backgroundColor: AppColors.error,
+      duration: const Duration(seconds: 4),
+    ));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      child: Row(children: [
+        const Icon(Icons.image_outlined, size: 18, color: AppColors.textMuted),
+        const SizedBox(width: 10),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text('App logo', style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+          const SizedBox(height: 4),
+          if (_hasLogo)
+            Row(children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.memory(
+                  base64Decode(currentBase64.split(',').last),
+                  width: 40, height: 40, fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) =>
+                      const Icon(Icons.broken_image, size: 40),
+                ),
+              ),
+              const SizedBox(width: 10),
+              const Text('Logo uploaded',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600,
+                      color: AppColors.success)),
+            ])
+          else
+            const Text('No logo (using default icon)',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+        ])),
+        const SizedBox(width: 8),
+        // Upload button
+        TextButton.icon(
+          onPressed: () => _pickImage(context),
+          icon: const Icon(Icons.upload_outlined, size: 16),
+          label: Text(_hasLogo ? 'Change' : 'Upload'),
+          style: TextButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            minimumSize: Size.zero,
+          ),
+        ),
+        // Remove button
+        if (_hasLogo)
+          IconButton(
+            icon: const Icon(Icons.delete_outline, size: 18, color: AppColors.error),
+            onPressed: () async {
+              final confirm = await showDialog<bool>(
+                context: context,
+                builder: (_) => AlertDialog(
+                  title: const Text('Remove logo'),
+                  content: const Text('Remove the app logo? Default icon will be used.'),
+                  actions: [
+                    TextButton(onPressed: () => Navigator.pop(context, false),
+                        child: const Text('Cancel')),
+                    ElevatedButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+                      child: const Text('Remove'),
+                    ),
+                  ],
+                ),
+              );
+              if (confirm == true) await onRemove();
+            },
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+          ),
+      ]),
+    );
+  }
 }

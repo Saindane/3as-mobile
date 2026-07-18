@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -6,6 +7,8 @@ import '../theme/app_theme.dart';
 import '../layout/responsive.dart';
 import '../../features/auth/data/repositories/auth_repository_impl.dart';
 import '../router/app_router.dart';
+import '../providers/branding_provider.dart';
+import '../providers/nav_index_provider.dart';
 import '../../features/notices/presentation/providers/notice_provider.dart';
 import '../../features/notices/data/models/notice_model.dart';
 import '../../features/dashboard/presentation/providers/dashboard_provider.dart';
@@ -107,6 +110,14 @@ class _AppShellState extends ConsumerState<AppShell> {
 
   @override
   Widget build(BuildContext context) {
+    // Listen for programmatic navigation from other screens
+    ref.listen(navIndexProvider, (_, next) {
+      if (next >= 0 && next < widget.pages.length) {
+        setState(() => _selectedIndex = next);
+        ref.read(navIndexProvider.notifier).state = -1; // reset
+      }
+    });
+
     return ResponsiveLayout(
       mobile:  _buildMobileLayout(),
       desktop: _buildDesktopLayout(),
@@ -123,27 +134,52 @@ class _AppShellState extends ConsumerState<AppShell> {
           color: AppColors.surface,
           child: Column(children: [
             // Brand
-            Container(
-              padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
-              decoration: const BoxDecoration(
-                  border: Border(bottom: BorderSide(color: AppColors.border))),
-              child: Row(children: [
-                Container(
-                  width: 36, height: 36,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary, borderRadius: BorderRadius.circular(9)),
-                  child: const Icon(Icons.apartment, color: Colors.white, size: 20),
-                ),
-                const SizedBox(width: 10),
-                const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('3As Complex',
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700,
-                          color: AppColors.text)),
-                  Text('Management System',
-                      style: TextStyle(fontSize: 10, color: AppColors.textMuted)),
+            Consumer(builder: (_, ref, __) {
+              final branding = getBranding(ref);
+              return Container(
+                padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
+                decoration: const BoxDecoration(
+                    border: Border(bottom: BorderSide(color: AppColors.border))),
+                child: Row(children: [
+                  Container(
+                    width: 36, height: 36,
+                    decoration: BoxDecoration(
+                      color: branding.primaryColorValue,
+                      borderRadius: BorderRadius.circular(9)),
+                    child: branding.isBase64Logo
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(9),
+                            child: Image.memory(
+                                base64Decode(branding.appLogoUrl.split(',').last),
+                                width: 36, height: 36, fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) =>
+                                    const Icon(Icons.apartment, color: Colors.white, size: 20)),
+                          )
+                        : branding.isNetworkLogo
+                            ? ClipRRect(
+                                borderRadius: BorderRadius.circular(9),
+                                child: Image.network(branding.appLogoUrl,
+                                    width: 36, height: 36, fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) =>
+                                        const Icon(Icons.apartment, color: Colors.white, size: 20)),
+                              )
+                            : const Icon(Icons.apartment, color: Colors.white, size: 20),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(branding.appName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700,
+                            color: AppColors.text)),
+                    Text(branding.appTagline,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 10, color: AppColors.textMuted)),
+                  ])),
                 ]),
-              ]),
-            ),
+              );
+            }),
 
             // User chip
             Container(
@@ -266,7 +302,7 @@ class _AppShellState extends ConsumerState<AppShell> {
             child: const Icon(Icons.apartment, color: Colors.white, size: 15),
           ),
           const SizedBox(width: 8),
-          const Text('3As Complex'),
+          Text(getBranding(ref).appName),
         ]),
         actions: [
           Container(

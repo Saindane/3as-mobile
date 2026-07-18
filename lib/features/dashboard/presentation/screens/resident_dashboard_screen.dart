@@ -35,249 +35,208 @@ class ResidentDashboardScreen extends ConsumerWidget {
         padding: const EdgeInsets.all(16),
         children: [
 
-          // ── Welcome banner ────────────────────────────────
+          // ── Greeting banner ───────────────────────────────
           profileAsync.when(
-            loading: () => const _Skeleton(height: 90),
-            error:   (e, _) => const SizedBox(),
-            data: (profile) => Container(
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [AppColors.primary, AppColors.primaryDark],
-                  begin: Alignment.topLeft, end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Row(children: [
-                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('Welcome back,',
-                      style: AppTextStyles.caption.copyWith(color: Colors.white70)),
-                  const SizedBox(height: 2),
-                  Text(profile.name,
-                      style: AppTextStyles.heading2.copyWith(color: Colors.white)),
-                  const SizedBox(height: 6),
-                  propAsync.when(
-                    loading: () => const SizedBox(),
-                    error:   (_, __) => const SizedBox(),
-                    data: (prop) => prop != null
-                        ? Text('Unit ${prop.unitNo} · Floor ${prop.floor}',
-                            style: AppTextStyles.caption.copyWith(color: Colors.white70))
-                        : Text('No property assigned',
-                            style: AppTextStyles.caption.copyWith(color: Colors.white54)),
-                  ),
-                ])),
-                CircleAvatar(
-                  radius: 24,
-                  backgroundColor: Colors.white24,
-                  child: Text(
-                    profile.name.isNotEmpty ? profile.name[0].toUpperCase() : '?',
-                    style: const TextStyle(
-                        color: Colors.white, fontWeight: FontWeight.w700, fontSize: 18),
-                  ),
-                ),
-              ]),
+            loading: () => const _Skeleton(height: 100),
+            error:   (_, __) => const SizedBox(),
+            data: (profile) => propAsync.when(
+              loading: () => const _Skeleton(height: 100),
+              error:   (_, __) => _GreetingBanner(name: profile.name, unit: null),
+              data: (prop) => _GreetingBanner(name: profile.name, unit: prop),
             ),
           ),
 
           const SizedBox(height: 16),
 
-          // ── Stats from real data ──────────────────────────
-          const SectionHeader(title: 'Overview'),
-          const SizedBox(height: 10),
+          // ── Stats row ─────────────────────────────────────
           billsAsync.when(
-            loading: () => const _Skeleton(height: 100),
+            loading: () => const _Skeleton(height: 90),
             error:   (_, __) => const SizedBox(),
             data: (bills) {
-              final pending = bills.where((b) =>
-                  b.status.toUpperCase() == 'PENDING' ||
-                  b.status.toUpperCase() == 'OVERDUE').toList();
-              final paid   = bills.where((b) =>
-                  b.status.toUpperCase() == 'PAID').toList();
-              final totalDue = pending.fold(0.0, (sum, b) => sum + b.total);
+              final pendingBillIds = paymentsAsync.whenData((p) =>
+                p.where((x) => x.status.toUpperCase() == 'PENDING')
+                 .map((x) => x.billId).toSet()
+              ).valueOrNull ?? <int>{};
 
-              return GridView.count(
-                crossAxisCount: 2, crossAxisSpacing: 10, mainAxisSpacing: 10,
-                childAspectRatio: 1.6, shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                children: [
-                  StatCard(
-                    label: 'Amount due',
-                    value: totalDue > 0 ? '₹${totalDue.toStringAsFixed(0)}' : '₹0',
-                    color: totalDue > 0 ? AppColors.error : AppColors.success,
-                    icon: Icons.receipt_long_outlined,
-                    subtitle: pending.isNotEmpty ? 'Unpaid bills' : 'All clear',
-                  ),
-                  StatCard(
-                    label: 'Bills paid',
-                    value: '${paid.length}',
-                    color: AppColors.success,
-                    icon: Icons.check_circle_outline,
-                  ),
-                  complaintsAsync.when(
-                    loading: () => const StatCard(
-                        label: 'Complaints', value: '-',
-                        color: AppColors.warning, icon: Icons.build_circle_outlined),
-                    error: (_, __) => const StatCard(
-                        label: 'Complaints', value: '-',
-                        color: AppColors.warning, icon: Icons.build_circle_outlined),
-                    data: (complaints) => StatCard(
-                      label: 'Open complaints',
-                      value: '${complaints.where((c) => c.status.toUpperCase() != 'RESOLVED' && c.status.toUpperCase() != 'CLOSED').length}',
-                      color: AppColors.warning,
+              final unpaid    = bills.where((b) => !b.isPaid && !b.isWaived).toList();
+              final paid      = bills.where((b) => b.isPaid).length;
+              final totalDue  = unpaid.fold(0.0, (s, b) => s + b.total);
+              final overdue   = unpaid.where((b) => b.isOverdue).length;
+              final verifying = pendingBillIds.length;
+
+              return Row(children: [
+                Expanded(child: _StatTile(
+                  icon: Icons.receipt_long_outlined,
+                  iconColor: totalDue > 0 ? AppColors.error : AppColors.success,
+                  label: 'Amount due',
+                  value: totalDue > 0 ? '₹${totalDue.toStringAsFixed(0)}' : '₹0',
+                  sub: overdue > 0 ? '$overdue overdue' : verifying > 0 ? 'Verifying' : 'All clear',
+                  subColor: overdue > 0 ? AppColors.error : AppColors.success,
+                )),
+                const SizedBox(width: 10),
+                Expanded(child: _StatTile(
+                  icon: Icons.check_circle_outline,
+                  iconColor: AppColors.success,
+                  label: 'Months paid',
+                  value: '$paid',
+                  sub: paid > 0 ? 'This year' : 'None yet',
+                  subColor: AppColors.textMuted,
+                )),
+                const SizedBox(width: 10),
+                Expanded(child: complaintsAsync.when(
+                  loading: () => const _StatTile(icon: Icons.build_circle_outlined,
+                      iconColor: AppColors.warning, label: 'Complaints', value: '-', sub: ''),
+                  error:   (_, __) => const _StatTile(icon: Icons.build_circle_outlined,
+                      iconColor: AppColors.warning, label: 'Complaints', value: '-', sub: ''),
+                  data: (complaints) {
+                    final open = complaints.where((c) =>
+                        c.status.toUpperCase() != 'RESOLVED' &&
+                        c.status.toUpperCase() != 'CLOSED').length;
+                    return _StatTile(
                       icon: Icons.build_circle_outlined,
-                    ),
-                  ),
-                  noticesAsync.when(
-                    loading: () => const StatCard(
-                        label: 'Notices', value: '-',
-                        color: AppColors.primary, icon: Icons.campaign_outlined),
-                    error: (_, __) => const StatCard(
-                        label: 'Notices', value: '-',
-                        color: AppColors.primary, icon: Icons.campaign_outlined),
-                    data: (notices) => StatCard(
-                      label: 'Notices',
-                      value: '${notices.length}',
-                      color: AppColors.primary,
-                      icon: Icons.campaign_outlined,
-                    ),
-                  ),
-                ],
-              );
+                      iconColor: AppColors.warning,
+                      label: 'Complaints',
+                      value: '$open',
+                      sub: open > 0 ? 'Open' : 'All resolved',
+                      subColor: open > 0 ? AppColors.warning : AppColors.success,
+                    );
+                  },
+                )),
+              ]);
             },
           ),
 
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
 
-          // ── Pending bills ─────────────────────────────────
+          // ── Bills section ─────────────────────────────────
           billsAsync.when(
-            loading: () => const SizedBox(),
+            loading: () => const _Skeleton(height: 130),
             error:   (_, __) => const SizedBox(),
             data: (bills) {
-              // Get submitted payment bill IDs
-              final pendingPaymentBillIds = paymentsAsync.whenData((payments) =>
-                payments.where((p) => p.status.toUpperCase() == 'PENDING')
-                        .map((p) => p.billId).toSet()
+              final pendingBillIds = paymentsAsync.whenData((p) =>
+                p.where((x) => x.status.toUpperCase() == 'PENDING')
+                 .map((x) => x.billId).toSet()
               ).valueOrNull ?? <int>{};
 
               final unpaid = bills.where((b) => !b.isPaid && !b.isWaived).toList();
-              if (unpaid.isEmpty) return const SizedBox();
+              if (unpaid.isEmpty) {
+                return AppCard(child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(children: [
+                    const Icon(Icons.check_circle, color: AppColors.success, size: 36),
+                    const SizedBox(width: 12),
+                    Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text('All bills paid!', style: AppTextStyles.bodyBold),
+                      Text('Great job staying on time 🎉',
+                          style: AppTextStyles.caption),
+                    ]),
+                  ]),
+                ));
+              }
 
               return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 const SectionHeader(title: 'Bills'),
                 const SizedBox(height: 10),
                 ...unpaid.map((bill) {
-                  final hasSubmitted = pendingPaymentBillIds.contains(bill.billId);
-                  final badgeLabel = hasSubmitted ? 'Verifying'
-                      : bill.status.toUpperCase() == 'OVERDUE' ? 'Overdue' : 'Pending';
-                  final badgeColor = hasSubmitted ? AppColors.warning
-                      : bill.status.toUpperCase() == 'OVERDUE'
-                          ? AppColors.error : AppColors.warning;
+                  final hasSubmitted = pendingBillIds.contains(bill.billId);
+                  final isOverdue    = bill.isOverdue;
+
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 10),
                     child: AppCard(
-                      borderColor: badgeColor,
+                      borderColor: isOverdue
+                          ? AppColors.error.withOpacity(.5)
+                          : hasSubmitted
+                              ? AppColors.warning.withOpacity(.5)
+                              : AppColors.primary.withOpacity(.3),
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                          Text('${_monthName(bill.month)} ${bill.year}',
-                              style: AppTextStyles.bodyBold),
-                          AppBadge(label: badgeLabel, color: badgeColor),
-                        ]),
-                        const SizedBox(height: 8),
+                        // Header row
                         Row(children: [
-                          Expanded(child: _MiniStat(
+                          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            Text('${_monthName(bill.month)} ${bill.year}',
+                                style: AppTextStyles.bodyBold),
+                            Text(
+                              hasSubmitted
+                                  ? 'Payment submitted — awaiting verification'
+                                  : isOverdue
+                                      ? 'Overdue — penalty accruing daily'
+                                      : bill.dueDate != null ? 'Due by ${bill.dueDate}' : 'Payment pending',
+                              style: AppTextStyles.caption.copyWith(
+                                color: hasSubmitted
+                                    ? AppColors.warning
+                                    : isOverdue
+                                        ? AppColors.error
+                                        : AppColors.textMuted,
+                              ),
+                            ),
+                          ])),
+                          AppBadge(
+                            label: hasSubmitted
+                                ? 'Verifying'
+                                : isOverdue ? 'Overdue' : 'Pending',
+                            color: hasSubmitted
+                                ? AppColors.warning
+                                : isOverdue ? AppColors.error : AppColors.warning,
+                          ),
+                        ]),
+
+                        const SizedBox(height: 10),
+                        const Divider(height: 1),
+                        const SizedBox(height: 10),
+
+                        // Amount breakdown
+                        Row(children: [
+                          Expanded(child: _AmountItem(
                               label: 'Maintenance',
                               value: '₹${bill.maintenance.toStringAsFixed(0)}')),
-                          if (bill.penalty > 0)
-                            Expanded(child: _MiniStat(
+                          if (bill.penalty > 0) ...[
+                            Expanded(child: _AmountItem(
                                 label: 'Penalty',
                                 value: '₹${bill.penalty.toStringAsFixed(0)}',
                                 valueColor: AppColors.error)),
-                          Expanded(child: _MiniStat(
-                              label: 'Total',
+                          ],
+                          Expanded(child: _AmountItem(
+                              label: 'Total due',
                               value: '₹${bill.total.toStringAsFixed(0)}',
-                              valueColor: AppColors.error)),
+                              valueColor: AppColors.error,
+                              bold: true)),
                         ]),
-                        if (hasSubmitted) ...[
-                          const SizedBox(height: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 5),
-                            decoration: BoxDecoration(
-                              color: AppColors.warning.withOpacity(.1),
-                              borderRadius: BorderRadius.circular(6),
+
+                        if (!hasSubmitted) ...[
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                // Switch to Pay now tab (index 2 for resident)
+                // This is handled by AppShell via bottom nav
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                  content: Text('Tap "Pay now" in the menu to make payment'),
+                  duration: Duration(seconds: 2),
+                ));
+              },
+                              icon: const Icon(Icons.payment, size: 16),
+                              label: const Text('Pay now'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: isOverdue
+                                    ? AppColors.error : AppColors.primary,
+                                padding: const EdgeInsets.symmetric(vertical: 10),
+                              ),
                             ),
-                            child: const Row(children: [
-                              Icon(Icons.pending_outlined,
-                                  size: 13, color: AppColors.warning),
-                              SizedBox(width: 6),
-                              Text('Payment submitted — awaiting verification',
-                                  style: TextStyle(
-                                      fontSize: 11, color: AppColors.warning)),
-                            ]),
                           ),
                         ],
                       ]),
                     ),
                   );
-                }).toList(),
+                }),
               ]);
             },
           ),
 
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
 
-          // ── Recent complaints ─────────────────────────────
-          complaintsAsync.when(
-            loading: () => const SizedBox(),
-            error:   (_, __) => const SizedBox(),
-            data: (complaints) {
-              if (complaints.isEmpty) return const SizedBox();
-              final recent = complaints.take(3).toList();
-              return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const SectionHeader(title: 'My complaints'),
-                const SizedBox(height: 10),
-                AppCard(child: Column(children: [
-                  ...recent.asMap().entries.map((e) => Column(children: [
-                    if (e.key > 0) const Divider(height: 1),
-                    _ActivityRow(
-                      icon: Icons.build_circle_outlined,
-                      color: AppColors.warning,
-                      title: e.value.title,
-                      sub: e.value.status[0].toUpperCase() +
-                          e.value.status.substring(1).toLowerCase(),
-                    ),
-                  ])),
-                ])),
-              ]);
-            },
-          ),
-
-          const SizedBox(height: 20),
-
-          // ── Recent notices ────────────────────────────────
-          noticesAsync.when(
-            loading: () => const SizedBox(),
-            error:   (_, __) => const SizedBox(),
-            data: (notices) {
-              if (notices.isEmpty) return const SizedBox();
-              final recent = notices.take(3).toList();
-              return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const SectionHeader(title: 'Latest notices'),
-                const SizedBox(height: 10),
-                AppCard(child: Column(children: [
-                  ...recent.asMap().entries.map((e) => Column(children: [
-                    if (e.key > 0) const Divider(height: 1),
-                    _ActivityRow(
-                      icon: Icons.campaign_outlined,
-                      color: AppColors.primary,
-                      title: e.value.title,
-                      sub: e.value.category ?? 'General',
-                    ),
-                  ])),
-                ])),
-              ]);
-            },
-          ),
+          // ── Recent activity ───────────────────────────────
+          _buildRecentActivity(complaintsAsync, noticesAsync, paymentsAsync),
 
           const SizedBox(height: 20),
         ],
@@ -285,10 +244,209 @@ class ResidentDashboardScreen extends ConsumerWidget {
     );
   }
 
+  Widget _buildRecentActivity(
+    AsyncValue complaintsAsync,
+    AsyncValue noticesAsync,
+    AsyncValue paymentsAsync,
+  ) {
+    final items = <_ActivityItem>[];
+
+    // Add payment activities
+    if (paymentsAsync is AsyncData) {
+      final payments = (paymentsAsync as AsyncData).value as List;
+      for (final p in payments.take(2)) {
+        items.add(_ActivityItem(
+          icon: p.status.toString().toUpperCase() == 'VERIFIED'
+              ? Icons.check_circle_outline : Icons.pending_outlined,
+          color: p.status.toString().toUpperCase() == 'VERIFIED'
+              ? AppColors.success : AppColors.warning,
+          title: p.status.toString().toUpperCase() == 'VERIFIED'
+              ? 'Payment verified'
+              : 'Payment submitted — awaiting verification',
+          sub: '₹${p.amount.toStringAsFixed(0)} · UTR: ${p.utr ?? "-"}',
+          date: p.createdAt,
+        ));
+      }
+    }
+
+    // Add complaint activities
+    if (complaintsAsync is AsyncData) {
+      final complaints = (complaintsAsync as AsyncData).value as List;
+      for (final c in complaints.take(2)) {
+        items.add(_ActivityItem(
+          icon: Icons.build_circle_outlined,
+          color: AppColors.warning,
+          title: c.title as String,
+          sub: c.status.toString()[0].toUpperCase() +
+              c.status.toString().substring(1).toLowerCase(),
+          date: c.createdAt as String,
+        ));
+      }
+    }
+
+    // Add notice activities
+    if (noticesAsync is AsyncData) {
+      final notices = (noticesAsync as AsyncData).value as List;
+      for (final n in notices.take(2)) {
+        items.add(_ActivityItem(
+          icon: Icons.campaign_outlined,
+          color: AppColors.primary,
+          title: n.title as String,
+          sub: n.category as String? ?? 'Notice',
+          date: n.createdAt as String,
+        ));
+      }
+    }
+
+    if (items.isEmpty) return const SizedBox();
+
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      const SectionHeader(title: 'Recent activity'),
+      const SizedBox(height: 10),
+      AppCard(child: Column(
+        children: items.asMap().entries.map((e) {
+          final i    = e.key;
+          final item = e.value;
+          return Column(children: [
+            if (i > 0) const Divider(height: 1),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              child: Row(children: [
+                Container(
+                  width: 34, height: 34,
+                  decoration: BoxDecoration(
+                      color: item.color.withOpacity(.1), shape: BoxShape.circle),
+                  child: Icon(item.icon, color: item.color, size: 17),
+                ),
+                const SizedBox(width: 10),
+                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(item.title, style: AppTextStyles.bodyBold.copyWith(fontSize: 13),
+                      maxLines: 1, overflow: TextOverflow.ellipsis),
+                  Text(item.sub, style: AppTextStyles.caption),
+                ])),
+                Text(_relativeDate(item.date),
+                    style: AppTextStyles.caption.copyWith(fontSize: 10)),
+              ]),
+            ),
+          ]);
+        }).toList(),
+      )),
+    ]);
+  }
+
   String _monthName(int m) => [
-    '', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    '', 'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
   ][m];
+
+  String _relativeDate(String iso) {
+    try {
+      final dt   = DateTime.parse(iso);
+      final diff = DateTime.now().difference(dt);
+      if (diff.inDays == 0) return 'Today';
+      if (diff.inDays == 1) return 'Yesterday';
+      if (diff.inDays < 7)  return '${diff.inDays}d ago';
+      return '${dt.day}/${dt.month}';
+    } catch (_) { return ''; }
+  }
+}
+
+// ── Sub-widgets ───────────────────────────────────────────────────
+
+class _GreetingBanner extends StatelessWidget {
+  final String name;
+  final dynamic unit;
+  const _GreetingBanner({required this.name, this.unit});
+
+  String get _greeting {
+    final h = DateTime.now().hour;
+    if (h < 12) return 'Good morning';
+    if (h < 17) return 'Good afternoon';
+    return 'Good evening';
+  }
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(18),
+    decoration: BoxDecoration(
+      gradient: const LinearGradient(
+        colors: [AppColors.primary, AppColors.primaryDark],
+        begin: Alignment.topLeft, end: Alignment.bottomRight,
+      ),
+      borderRadius: BorderRadius.circular(14),
+    ),
+    child: Row(children: [
+      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('$_greeting 👋',
+            style: AppTextStyles.caption.copyWith(color: Colors.white70)),
+        const SizedBox(height: 2),
+        Text(name,
+            style: AppTextStyles.heading2.copyWith(color: Colors.white),
+            maxLines: 1, overflow: TextOverflow.ellipsis),
+        if (unit != null) ...[
+          const SizedBox(height: 4),
+          Text('Unit ${unit.unitNo} · Floor ${unit.floor}',
+              style: AppTextStyles.caption.copyWith(color: Colors.white60)),
+        ],
+      ])),
+      CircleAvatar(
+        radius: 22, backgroundColor: Colors.white24,
+        child: Text(name.isNotEmpty ? name[0].toUpperCase() : '?',
+            style: const TextStyle(
+                color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16)),
+      ),
+    ]),
+  );
+}
+
+class _StatTile extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final String label, value, sub;
+  final Color subColor;
+  const _StatTile({
+    required this.icon, required this.iconColor,
+    required this.label, required this.value,
+    required this.sub, this.subColor = AppColors.textMuted,
+  });
+
+  @override
+  Widget build(BuildContext context) => AppCard(
+    padding: const EdgeInsets.all(12),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Icon(icon, color: iconColor, size: 22),
+      const SizedBox(height: 8),
+      Text(value, style: AppTextStyles.heading2.copyWith(fontSize: 20)),
+      const SizedBox(height: 2),
+      Text(label, style: AppTextStyles.caption),
+      const SizedBox(height: 2),
+      Text(sub, style: AppTextStyles.caption.copyWith(
+          color: subColor, fontSize: 10)),
+    ]),
+  );
+}
+
+class _AmountItem extends StatelessWidget {
+  final String label, value;
+  final Color valueColor;
+  final bool bold;
+  const _AmountItem({
+    required this.label, required this.value,
+    this.valueColor = AppColors.text, this.bold = false,
+  });
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(label, style: AppTextStyles.caption),
+      const SizedBox(height: 2),
+      Text(value, style: TextStyle(
+          fontSize: bold ? 15 : 13,
+          fontWeight: bold ? FontWeight.w700 : FontWeight.w600,
+          color: valueColor)),
+    ],
+  );
 }
 
 class _Skeleton extends StatelessWidget {
@@ -298,44 +456,16 @@ class _Skeleton extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     height: height,
     decoration: BoxDecoration(
-      color: AppColors.slate100, borderRadius: BorderRadius.circular(14)),
+        color: AppColors.slate100, borderRadius: BorderRadius.circular(12)),
   );
 }
 
-class _MiniStat extends StatelessWidget {
-  final String label, value;
-  final Color valueColor;
-  const _MiniStat({required this.label, required this.value,
-      this.valueColor = AppColors.text});
-  @override
-  Widget build(BuildContext context) => Column(children: [
-    Text(value,
-        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700,
-            color: valueColor)),
-    Text(label, style: AppTextStyles.caption),
-  ]);
-}
-
-class _ActivityRow extends StatelessWidget {
+class _ActivityItem {
   final IconData icon;
   final Color color;
-  final String title, sub;
-  const _ActivityRow({required this.icon, required this.color,
-      required this.title, required this.sub});
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-    child: Row(children: [
-      Container(width: 32, height: 32,
-        decoration: BoxDecoration(
-            color: color.withOpacity(.1), shape: BoxShape.circle),
-        child: Icon(icon, color: color, size: 17)),
-      const SizedBox(width: 10),
-      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-        Text(title, style: AppTextStyles.bodyBold.copyWith(fontSize: 13)),
-        Text(sub, style: AppTextStyles.caption),
-      ])),
-    ]),
-  );
+  final String title, sub, date;
+  const _ActivityItem({
+    required this.icon, required this.color,
+    required this.title, required this.sub, required this.date,
+  });
 }

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import '../../../../core/providers/branding_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -71,20 +73,39 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 Center(
                   child: Column(
                     children: [
-                      Container(
-                        width: 64,
-                        height: 64,
-                        decoration: BoxDecoration(
-                          color: AppColors.primary,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: const Icon(Icons.apartment, color: Colors.white, size: 32),
-                      ),
-                      const SizedBox(height: 12),
-                      Text('3As Complex', style: AppTextStyles.heading1),
-                      const SizedBox(height: 4),
-                      Text('Maintenance Management System',
-                          style: AppTextStyles.caption.copyWith(fontSize: 13)),
+                      Consumer(builder: (context, ref, _) {
+                        final branding = getBranding(ref);
+                        return Column(children: [
+                          Container(
+                            width: 64, height: 64,
+                            decoration: BoxDecoration(
+                              color: branding.primaryColorValue,
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: branding.isBase64Logo
+                                ? ClipRRect(
+                                    borderRadius: BorderRadius.circular(16),
+                                    child: Image.memory(
+                                      base64Decode(branding.appLogoUrl.split(',').last),
+                                      width: 64, height: 64, fit: BoxFit.cover,
+                                    ),
+                                  )
+                                : branding.isNetworkLogo
+                                    ? ClipRRect(
+                                        borderRadius: BorderRadius.circular(16),
+                                        child: Image.network(branding.appLogoUrl,
+                                            width: 64, height: 64, fit: BoxFit.cover),
+                                      )
+                                    : const Icon(Icons.apartment,
+                                        color: Colors.white, size: 32),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(branding.appName, style: AppTextStyles.heading1),
+                          const SizedBox(height: 4),
+                          Text(branding.appTagline,
+                              style: AppTextStyles.caption.copyWith(fontSize: 13)),
+                        ]);
+                      }),
                     ],
                   ),
                 ),
