@@ -175,7 +175,7 @@ class _CollectionTab extends ConsumerWidget {
           // Stat cards
           GridView.count(
             crossAxisCount: 2, crossAxisSpacing: 10, mainAxisSpacing: 10,
-            childAspectRatio: 1.6, shrinkWrap: true,
+            childAspectRatio: 1.8, shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             children: [
               StatCard(label: 'Total bills',  value: '${report['total_bills']}',
@@ -300,7 +300,7 @@ class _ComplaintAnalyticsTab extends ConsumerWidget {
         return ListView(padding: const EdgeInsets.all(16), children: [
           GridView.count(
             crossAxisCount: 3, crossAxisSpacing: 8, mainAxisSpacing: 8,
-            childAspectRatio: 1.2, shrinkWrap: true,
+            childAspectRatio: 1.4, shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             children: [
               StatCard(label: 'Total',    value: '${report['total']}',
