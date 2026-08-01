@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../../../shared/widgets/stat_card.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../../../core/constants/api_endpoints.dart';
 import '../providers/bill_provider.dart';
@@ -118,7 +119,7 @@ class _GenerateBillsScreenState extends ConsumerState<GenerateBillsScreen>
     return ListView(padding: const EdgeInsets.all(16), children: [
       // ── Bill details card ──────────────────────────────
       AppCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const SectionHeader(title: 'Bill details'),
+        SectionHeader(title: 'Bill details'),
         const SizedBox(height: 12),
 
         // Month & Year
@@ -315,7 +316,7 @@ class _GenerateBillsScreenState extends ConsumerState<GenerateBillsScreen>
     final propertiesAsync = ref.watch(propertiesListProvider);
 
     return AppCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      const SectionHeader(title: 'Select unit'),
+      SectionHeader(title: 'Select unit'),
       const SizedBox(height: 10),
 
       // Search
