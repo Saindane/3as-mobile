@@ -72,7 +72,7 @@ class _GenerateBillsScreenState extends ConsumerState<GenerateBillsScreen>
           'property_id': _selectedPropertyId,
       };
 
-      final res = await client.post('${ApiEndpoints.bills}/generate', data: body);
+      final res = await client.post(ApiEndpoints.generateBills, data: body);
       final data = res.data as Map<String, dynamic>;
 
       // Refresh providers
