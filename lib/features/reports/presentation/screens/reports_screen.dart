@@ -173,21 +173,23 @@ class _CollectionTab extends ConsumerWidget {
           const SizedBox(height: 10),
 
           // Stat cards
-          GridView.count(
-            crossAxisCount: 2, crossAxisSpacing: 10, mainAxisSpacing: 10,
-            childAspectRatio: 1.6, shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            children: [
-              StatCard(label: 'Total bills',  value: '${report['total_bills']}',
-                  color: AppColors.primary, icon: Icons.receipt_long_outlined),
-              StatCard(label: 'Paid',         value: '${report['paid_count']}',
-                  color: AppColors.success,  icon: Icons.check_circle_outline),
-              StatCard(label: 'Pending',      value: '${report['pending_count']}',
-                  color: AppColors.warning,  icon: Icons.pending_outlined),
-              StatCard(label: 'Overdue',      value: '${report['overdue_count']}',
-                  color: AppColors.error,    icon: Icons.warning_amber_outlined),
-            ],
-          ),
+          Column(children: [
+            Row(children: [
+              Expanded(child: StatCard(label: 'Total bills', value: '${report['total_bills']}',
+                  color: AppColors.primary, icon: Icons.receipt_long_outlined)),
+              const SizedBox(width: 10),
+              Expanded(child: StatCard(label: 'Paid', value: '${report['paid_count']}',
+                  color: AppColors.success, icon: Icons.check_circle_outline)),
+            ]),
+            const SizedBox(height: 10),
+            Row(children: [
+              Expanded(child: StatCard(label: 'Pending', value: '${report['pending_count']}',
+                  color: AppColors.warning, icon: Icons.pending_outlined)),
+              const SizedBox(width: 10),
+              Expanded(child: StatCard(label: 'Overdue', value: '${report['overdue_count']}',
+                  color: AppColors.error, icon: Icons.warning_amber_outlined)),
+            ]),
+          ]),
           const SizedBox(height: 10),
 
           // Bill list
@@ -298,19 +300,16 @@ class _ComplaintAnalyticsTab extends ConsumerWidget {
       data: (report) {
         final categories = report['by_category'] as List;
         return ListView(padding: const EdgeInsets.all(16), children: [
-          GridView.count(
-            crossAxisCount: 3, crossAxisSpacing: 8, mainAxisSpacing: 8,
-            childAspectRatio: 1.2, shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            children: [
-              StatCard(label: 'Total',    value: '${report['total']}',
-                  color: AppColors.primary, icon: Icons.list_alt_outlined),
-              StatCard(label: 'Open',     value: '${report['open']}',
-                  color: AppColors.warning, icon: Icons.pending_outlined),
-              StatCard(label: 'Resolved', value: '${report['resolved']}',
-                  color: AppColors.success, icon: Icons.check_circle_outline),
-            ],
-          ),
+          Row(children: [
+            Expanded(child: StatCard(label: 'Total', value: '${report['total']}',
+                color: AppColors.primary, icon: Icons.list_alt_outlined)),
+            const SizedBox(width: 8),
+            Expanded(child: StatCard(label: 'Open', value: '${report['open']}',
+                color: AppColors.warning, icon: Icons.pending_outlined)),
+            const SizedBox(width: 8),
+            Expanded(child: StatCard(label: 'Resolved', value: '${report['resolved']}',
+                color: AppColors.success, icon: Icons.check_circle_outline)),
+          ]),
           const SizedBox(height: 14),
           const SectionHeader(title: 'By category'),
           const SizedBox(height: 8),

@@ -75,7 +75,7 @@ class AdminDashboardScreen extends ConsumerWidget {
                 crossAxisCount: 2,
                 crossAxisSpacing: 10,
                 mainAxisSpacing: 10,
-                childAspectRatio: 2.2,
+                childAspectRatio: 1.6,
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 children: [
@@ -431,8 +431,10 @@ class _BigKpiCard extends StatelessWidget {
   Widget build(BuildContext context) => AppCard(
     padding: const EdgeInsets.all(12),
     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(value, style: TextStyle(
-          fontSize: 22, fontWeight: FontWeight.w700, color: valueColor)),
+      Text(value,
+          maxLines: 1, overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+          fontSize: 20, fontWeight: FontWeight.w700, color: valueColor)),
       const SizedBox(height: 2),
       Text(label, style: const TextStyle(
           fontSize: 10, fontWeight: FontWeight.w600,
@@ -454,9 +456,12 @@ class _HealthBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Column(children: [
     Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-      Text(label, style: AppTextStyles.body.copyWith(fontSize: 13)),
+      Expanded(child: Text(label,
+          maxLines: 1, overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontSize: 11, color: AppColors.text))),
+      const SizedBox(width: 4),
       Text('${(value * 100).toStringAsFixed(0)}%',
-          style: AppTextStyles.bodyBold.copyWith(fontSize: 13)),
+          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
     ]),
     const SizedBox(height: 4),
     ClipRRect(
