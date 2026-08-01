@@ -230,7 +230,7 @@ class _AppShellState extends ConsumerState<AppShell> {
               padding: const EdgeInsets.all(8),
               decoration: const BoxDecoration(
                   border: Border(top: BorderSide(color: AppColors.border))),
-              child: ListTile(
+              child: Material(color: Colors.transparent, child: ListTile(
                 dense: true,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 leading: const Icon(Icons.logout, color: AppColors.error, size: 18),
@@ -367,21 +367,23 @@ class _SidebarItem extends StatelessWidget {
   const _SidebarItem({required this.item, required this.selected, required this.onTap});
 
   @override
-  Widget build(BuildContext context) => ListTile(
-      tileColor: Colors.transparent,
-    dense: true,
-    selected: selected,
-    selectedTileColor: AppColors.primaryLight,
-    selectedColor: AppColors.primary,
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-    leading: Icon(selected ? item.activeIcon : item.icon, size: 18,
-        color: selected ? AppColors.primary : AppColors.textSecondary),
-    title: Text(item.label, style: TextStyle(
-      fontSize: 13,
-      fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-      color: selected ? AppColors.primary : AppColors.textSecondary,
-    )),
-    onTap: onTap,
+  Widget build(BuildContext context) => Material(
+    color: Colors.transparent,
+    child: ListTile(
+      dense: true,
+      selected: selected,
+      selectedTileColor: AppColors.primaryLight,
+      selectedColor: AppColors.primary,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      leading: Icon(selected ? item.activeIcon : item.icon, size: 18,
+          color: selected ? AppColors.primary : AppColors.textSecondary),
+      title: Text(item.label, style: TextStyle(
+        fontSize: 13,
+        fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+        color: selected ? AppColors.primary : AppColors.textSecondary,
+      )),
+      onTap: onTap,
+    ),
   );
 }
 

@@ -1040,12 +1040,11 @@ class ProfileScreen extends ConsumerWidget {
           ])),
           const SizedBox(height: 12),
           AppCard(child: Column(children: [
-            ListTile(dense: true,
-              tileColor: Colors.transparent,
+            Material(color: Colors.transparent, child: ListTile(dense: true,
               leading: const Icon(Icons.lock_outline, color: AppColors.primary),
               title: const Text('Change password'),
               trailing: const Icon(Icons.chevron_right, color: AppColors.textMuted),
-              onTap: () => _showChangePasswordDialog(context, ref)),
+              onTap: () => _showChangePasswordDialog(context, ref))),
 
           ])),
           const SizedBox(height: 12),
