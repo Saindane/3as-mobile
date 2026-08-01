@@ -368,6 +368,7 @@ class _SidebarItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ListTile(
+      tileColor: Colors.transparent,
     dense: true,
     selected: selected,
     selectedTileColor: AppColors.primaryLight,
