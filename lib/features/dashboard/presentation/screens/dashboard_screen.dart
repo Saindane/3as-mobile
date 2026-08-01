@@ -854,6 +854,7 @@ class _AddPropertyDialogState extends ConsumerState<_AddPropertyDialog> {
           const SizedBox(height: 12),
           DropdownButtonFormField<int?>(
             value: _ownerId,
+            isExpanded: true,
             decoration: const InputDecoration(
               labelText: 'Owner (optional)',
               border: OutlineInputBorder(),
@@ -863,7 +864,11 @@ class _AddPropertyDialogState extends ConsumerState<_AddPropertyDialog> {
               const DropdownMenuItem<int?>(value: null, child: Text('No owner')),
               ..._users.map((u) => DropdownMenuItem<int?>(
                 value: u['user_id'] as int,
-                child: Text('${u['name']} · +91 ${u['mobile']}'),
+                child: Text(
+                  '${u["name"]} · ${u["mobile"]}',
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
               )),
             ],
             onChanged: (v) => setState(() => _ownerId = v),
