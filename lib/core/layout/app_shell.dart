@@ -316,11 +316,29 @@ class _AppShellState extends ConsumerState<AppShell> {
           ),
           Stack(children: [
             IconButton(icon: const Icon(Icons.notifications_outlined), onPressed: () => _showNotifications(context)),
-            Positioned(top: 8, right: 8,
-              child: Container(width: 8, height: 8,
-                  decoration: const BoxDecoration(
-                      color: AppColors.error, shape: BoxShape.circle))),
+            if (_hasUnread)
+              Positioned(top: 8, right: 8,
+                child: Container(width: 8, height: 8,
+                    decoration: const BoxDecoration(
+                        color: AppColors.error, shape: BoxShape.circle))),
           ]),
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert),
+            onSelected: (val) {
+              if (val == 'signout') _signOut();
+              if (val == 'profile') setState(() => _selectedIndex = widget.pages.length - 1);
+            },
+            itemBuilder: (_) => [
+              PopupMenuItem(
+                value: 'signout',
+                child: Row(children: [
+                  const Icon(Icons.logout, color: AppColors.error, size: 18),
+                  const SizedBox(width: 8),
+                  const Text('Sign out', style: TextStyle(color: AppColors.error)),
+                ]),
+              ),
+            ],
+          ),
         ],
       ),
       body: _currentPage,
