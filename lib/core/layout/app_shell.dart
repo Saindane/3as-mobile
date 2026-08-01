@@ -237,7 +237,7 @@ class _AppShellState extends ConsumerState<AppShell> {
                 title: const Text('Sign out', style: TextStyle(fontSize: 13,
                     fontWeight: FontWeight.w500, color: AppColors.error)),
                 onTap: _signOut,
-              ),
+              )),
             ),
           ]),
         ),
