@@ -6,6 +6,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../shared/widgets/stat_card.dart';
 import '../../../bills/presentation/providers/bill_provider.dart';
 import '../providers/payment_provider.dart';
+import '../../../settings/presentation/screens/settings_screen.dart';
 
 class PayNowScreen extends ConsumerStatefulWidget {
   final int? billId;
@@ -111,17 +112,18 @@ class _PayNowScreenState extends ConsumerState<PayNowScreen> {
                 ));
               }
 
-              // Get payment status per bill
+              // Wait for payments to load before rendering status
               final myPaymentsAsync = ref.watch(myPaymentsProvider);
-              final pendingBillIds = myPaymentsAsync.whenData((payments) =>
-                payments.where((p) => p.status.toUpperCase() == 'PENDING')
-                        .map((p) => p.billId).toSet()
-              ).valueOrNull ?? <int>{};
-
-              final rejectedBillIds = myPaymentsAsync.whenData((payments) =>
-                payments.where((p) => p.status.toUpperCase() == 'REJECTED')
-                        .map((p) => p.billId).toSet()
-              ).valueOrNull ?? <int>{};
+              if (myPaymentsAsync.isLoading) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              final allPayments = myPaymentsAsync.valueOrNull ?? [];
+              final pendingBillIds = allPayments
+                  .where((p) => p.status.toUpperCase() == 'PENDING')
+                  .map((p) => p.billId).toSet();
+              final rejectedBillIds = allPayments
+                  .where((p) => p.status.toUpperCase() == 'REJECTED')
+                  .map((p) => p.billId).toSet();
 
               if (bills.every((b) => b.isPaid || b.isWaived)) {
                 return const AppCard(child: Padding(
@@ -139,7 +141,7 @@ class _PayNowScreenState extends ConsumerState<PayNowScreen> {
                 final hasPendingPayment = pendingBillIds.contains(bill.billId);
                 final isRejected = rejectedBillIds.contains(bill.billId);
                 final isSettled = bill.isPaid || bill.isWaived;
-                final canPay = !isSettled && !hasPendingPayment || isRejected;
+                final canPay = !isSettled && (!hasPendingPayment || isRejected);
 
                 final badgeColor = isSettled
                     ? AppColors.success
@@ -302,18 +304,26 @@ class _PayNowScreenState extends ConsumerState<PayNowScreen> {
                 const SizedBox(height: 6),
                 const Text('UPI ID:', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
                 Row(children: [
-                  const Text('3ascomplex@upi',
-                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600,
+                  Consumer(builder: (ctx, ref, _) {
+                    final settings = ref.watch(settingsProvider);
+                    final upiId = settings.whenData((list) {
+                      final map = { for (var s in list) s['key'] as String : s['value'] as String };
+                      return map['upi_id'] ?? '3ascomplex@upi';
+                    }).valueOrNull ?? '3ascomplex@upi';
+                    return Row(children: [
+                      Text(upiId, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600,
                           color: AppColors.primary)),
-                  const SizedBox(width: 4),
-                  GestureDetector(
-                    onTap: () {
-                      Clipboard.setData(const ClipboardData(text: '3ascomplex@upi'));
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                          content: Text('UPI ID copied')));
-                    },
-                    child: const Icon(Icons.copy, size: 14, color: AppColors.textMuted),
-                  ),
+                      const SizedBox(width: 4),
+                      GestureDetector(
+                        onTap: () {
+                          Clipboard.setData(ClipboardData(text: upiId));
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                              content: Text('UPI ID copied')));
+                        },
+                        child: const Icon(Icons.copy, size: 14, color: AppColors.textMuted),
+                      ),
+                    ]);
+                  }),
                 ]),
                 const SizedBox(height: 6),
                 const Text('Or use NEFT/RTGS:',
