@@ -53,10 +53,15 @@ class ResidentDashboardScreen extends ConsumerWidget {
             loading: () => const _Skeleton(height: 90),
             error:   (_, __) => const SizedBox(),
             data: (bills) {
-              final pendingBillIds = paymentsAsync.whenData((p) =>
-                p.where((x) => x.status.toUpperCase() == 'PENDING')
-                 .map((x) => x.billId).toSet()
-              ).valueOrNull ?? <int>{};
+              // Wait for payments to load
+              if (paymentsAsync.isLoading) return const _Skeleton(height: 130);
+              final _allPayments = paymentsAsync.valueOrNull ?? [];
+              final pendingBillIds = _allPayments
+                .where((x) => x.status.toUpperCase() == 'PENDING')
+                .map((x) => x.billId).toSet();
+              final rejectedBillIds = _allPayments
+                .where((x) => x.status.toUpperCase() == 'REJECTED')
+                .map((x) => x.billId).toSet();
 
               final unpaid    = bills.where((b) => !b.isPaid && !b.isWaived).toList();
               final paid      = bills.where((b) => b.isPaid).length;
@@ -113,10 +118,15 @@ class ResidentDashboardScreen extends ConsumerWidget {
             loading: () => const _Skeleton(height: 130),
             error:   (_, __) => const SizedBox(),
             data: (bills) {
-              final pendingBillIds = paymentsAsync.whenData((p) =>
-                p.where((x) => x.status.toUpperCase() == 'PENDING')
-                 .map((x) => x.billId).toSet()
-              ).valueOrNull ?? <int>{};
+              // Wait for payments to load
+              if (paymentsAsync.isLoading) return const _Skeleton(height: 130);
+              final _allPayments = paymentsAsync.valueOrNull ?? [];
+              final pendingBillIds = _allPayments
+                .where((x) => x.status.toUpperCase() == 'PENDING')
+                .map((x) => x.billId).toSet();
+              final rejectedBillIds = _allPayments
+                .where((x) => x.status.toUpperCase() == 'REJECTED')
+                .map((x) => x.billId).toSet();
 
               final unpaid = bills.where((b) => !b.isPaid && !b.isWaived).toList();
               if (unpaid.isEmpty) {
@@ -139,6 +149,7 @@ class ResidentDashboardScreen extends ConsumerWidget {
                 const SizedBox(height: 10),
                 ...unpaid.map((bill) {
                   final hasSubmitted = pendingBillIds.contains(bill.billId);
+                  final isRejected   = rejectedBillIds.contains(bill.billId);
                   final isOverdue    = bill.isOverdue;
 
                   return Padding(
