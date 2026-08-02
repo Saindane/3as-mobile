@@ -123,21 +123,23 @@ class _BillsList extends ConsumerWidget {
         }
 
         // Get payment status per bill for resident
-        final paymentsAsync = widget.isAdmin
-            ? const AsyncData(<dynamic>[])
-            : ref.watch(myPaymentsProvider);
-        final pendingBillIds = paymentsAsync.valueOrNull
-            ?.where((p) => p.status.toUpperCase() == 'PENDING')
-            .map((p) => p.billId).toSet() ?? <int>{};
-        final rejectedBillIds = paymentsAsync.valueOrNull
-            ?.where((p) => p.status.toUpperCase() == 'REJECTED')
-            .map((p) => p.billId).toSet() ?? <int>{};
+        final paymentsValue = isAdmin ? null : ref.watch(myPaymentsProvider);
+        final List<dynamic> allPayments = (!isAdmin &&
+            paymentsValue != null && paymentsValue is AsyncData)
+            ? (paymentsValue as AsyncData).value as List
+            : [];
+        final pendingBillIds = allPayments
+            .where((p) => p.status.toString().toUpperCase() == 'PENDING')
+            .map((p) => (p.billId as int)).toSet();
+        final rejectedBillIds = allPayments
+            .where((p) => p.status.toString().toUpperCase() == 'REJECTED')
+            .map((p) => (p.billId as int)).toSet();
 
         return RefreshIndicator(
           onRefresh: () async {
             ref.invalidate(myBillsProvider);
             ref.invalidate(allBillsProvider);
-            if (!widget.isAdmin) ref.invalidate(myPaymentsProvider);
+            if (!isAdmin) ref.invalidate(myPaymentsProvider);
           },
           child: ListView.separated(
             padding: const EdgeInsets.all(16),
