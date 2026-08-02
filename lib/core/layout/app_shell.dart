@@ -224,8 +224,9 @@ class _AppShellState extends ConsumerState<AppShell> {
                     selected: _selectedIndex == item.index,
                     onTap: () {
                       setState(() => _selectedIndex = item.index);
-                      // Refresh payments when Pay Now tab selected
-                      if (item.index == 2 && widget.userRole.toUpperCase() == 'RESIDENT') {
+                      // Refresh payments when resident switches to Dashboard or Pay Now
+                      if (widget.userRole.toUpperCase() == 'RESIDENT' &&
+                          (item.index == 0 || item.index == 2)) {
                         ref.invalidate(myPaymentsProvider);
                         ref.invalidate(myBillsProvider);
                       }
@@ -356,9 +357,10 @@ class _AppShellState extends ConsumerState<AppShell> {
         currentIndex: clampedIndex,
         onTap: (i) {
           setState(() => _selectedIndex = mobileItems[i].index);
-          // Refresh payments when Pay Now tab selected (index 2 for resident)
+          // Refresh payments when resident switches to Dashboard or Pay Now
           final item = mobileItems[i];
-          if (item.index == 2 && widget.userRole.toUpperCase() == 'RESIDENT') {
+          if (widget.userRole.toUpperCase() == 'RESIDENT' &&
+              (item.index == 0 || item.index == 2)) {
             ref.invalidate(myPaymentsProvider);
             ref.invalidate(myBillsProvider);
           }
