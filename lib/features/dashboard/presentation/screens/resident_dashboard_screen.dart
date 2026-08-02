@@ -266,16 +266,31 @@ class ResidentDashboardScreen extends ConsumerWidget {
     if (paymentsAsync is AsyncData) {
       final payments = (paymentsAsync as AsyncData).value as List;
       for (final p in payments.take(2)) {
+        final status = p.status.toString().toUpperCase();
+        final IconData icon;
+        final Color color;
+        final String title;
+
+        if (status == 'VERIFIED') {
+          icon  = Icons.check_circle_outline;
+          color = AppColors.success;
+          title = 'Payment verified';
+        } else if (status == 'REJECTED') {
+          icon  = Icons.cancel_outlined;
+          color = AppColors.error;
+          title = 'Payment rejected — please resubmit';
+        } else {
+          icon  = Icons.pending_outlined;
+          color = AppColors.warning;
+          title = 'Payment submitted — awaiting verification';
+        }
+
         items.add(_ActivityItem(
-          icon: p.status.toString().toUpperCase() == 'VERIFIED'
-              ? Icons.check_circle_outline : Icons.pending_outlined,
-          color: p.status.toString().toUpperCase() == 'VERIFIED'
-              ? AppColors.success : AppColors.warning,
-          title: p.status.toString().toUpperCase() == 'VERIFIED'
-              ? 'Payment verified'
-              : 'Payment submitted — awaiting verification',
-          sub: '₹${p.amount.toStringAsFixed(0)} · UTR: ${p.utr ?? "-"}',
-          date: p.createdAt,
+          icon:  icon,
+          color: color,
+          title: title,
+          sub:   '₹${p.amount.toStringAsFixed(0)} · UTR: ${p.utr ?? "-"}',
+          date:  p.createdAt,
         ));
       }
     }
