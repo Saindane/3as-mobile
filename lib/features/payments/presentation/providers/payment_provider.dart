@@ -1,12 +1,17 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/router/app_router.dart';
 import '../../data/models/payment_model.dart';
 import '../../data/repositories/payment_repository.dart';
 
-final myPaymentsProvider = FutureProvider<List<PaymentModel>>(
-    (ref) => ref.watch(paymentRepositoryProvider).getMyPayments());
+final myPaymentsProvider = FutureProvider<List<PaymentModel>>((ref) {
+  ref.watch(sessionKeyProvider);
+  return ref.watch(paymentRepositoryProvider).getMyPayments();
+});
 
-final pendingPaymentsProvider = FutureProvider<List<PaymentModel>>(
-    (ref) => ref.watch(paymentRepositoryProvider).getPendingPayments());
+final pendingPaymentsProvider = FutureProvider<List<PaymentModel>>((ref) {
+  ref.watch(sessionKeyProvider);
+  return ref.watch(paymentRepositoryProvider).getPendingPayments();
+});
 
 // ── Submit payment state ──────────────────────────────────────────
 class SubmitPaymentState {

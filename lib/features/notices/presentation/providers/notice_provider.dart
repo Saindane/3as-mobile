@@ -1,9 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/router/app_router.dart';
 import '../../data/models/notice_model.dart';
 import '../../data/repositories/notice_repository.dart';
 
-final noticesProvider = FutureProvider<List<NoticeModel>>(
-    (ref) => ref.watch(noticeRepositoryProvider).getNotices());
+final noticesProvider = FutureProvider<List<NoticeModel>>((ref) {
+  ref.watch(sessionKeyProvider);
+  return ref.watch(noticeRepositoryProvider).getNotices();
+});
 
 class PublishNoticeState {
   final bool isLoading;

@@ -1,12 +1,17 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/models/complaint_model.dart';
 import '../../data/repositories/complaint_repository.dart';
+import '../../../../core/router/app_router.dart';
 
-final complaintsProvider = FutureProvider<List<ComplaintModel>>(
-    (ref) => ref.watch(complaintRepositoryProvider).getComplaints());
+final complaintsProvider = FutureProvider<List<ComplaintModel>>((ref) {
+  ref.watch(sessionKeyProvider); // invalidate on user switch
+  return ref.watch(complaintRepositoryProvider).getComplaints();
+});
 
-final openComplaintsProvider = FutureProvider<List<ComplaintModel>>(
-    (ref) => ref.watch(complaintRepositoryProvider).getComplaints(status: 'new'));
+final openComplaintsProvider = FutureProvider<List<ComplaintModel>>((ref) {
+  ref.watch(sessionKeyProvider);
+  return ref.watch(complaintRepositoryProvider).getComplaints(status: 'new');
+});
 
 // ── Raise complaint state ─────────────────────────────────────────
 class RaiseComplaintState {

@@ -1,10 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/router/app_router.dart';
 import '../../data/models/bill_model.dart';
 import '../../data/repositories/bill_repository.dart';
 
 // ── Resident: own bills ───────────────────────────────────────────
-final myBillsProvider = FutureProvider<List<BillModel>>((ref) =>
-    ref.watch(billRepositoryProvider).getMyBills());
+final myBillsProvider = FutureProvider<List<BillModel>>((ref) {
+  ref.watch(sessionKeyProvider);
+  return ref.watch(billRepositoryProvider).getMyBills();
+});
 
 // ── Admin/Mgmt: all bills with optional filters ───────────────────
 final allBillsProvider = FutureProvider.family<List<BillModel>,
