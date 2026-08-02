@@ -424,6 +424,16 @@ class _UserCard extends ConsumerWidget {
                 Text(active ? 'Deactivate' : 'Activate'),
               ]),
             ),
+            // Reset password — admin only
+            if (TokenStore.role?.toUpperCase() == 'ADMIN')
+              const PopupMenuItem(
+                value: 'reset_password',
+                child: Row(children: [
+                  Icon(Icons.lock_reset_outlined, size: 16, color: AppColors.warning),
+                  SizedBox(width: 8),
+                  Text('Reset password', style: TextStyle(color: AppColors.warning)),
+                ]),
+              ),
             // Delete only available for admin
             if (TokenStore.role?.toUpperCase() == 'ADMIN')
               const PopupMenuItem(
@@ -494,6 +504,10 @@ class _UserCard extends ConsumerWidget {
         }
         break;
 
+      case 'reset_password':
+        await _showResetPasswordDialog(context, ref, client, userId, name);
+        break;
+
       case 'delete':
         final confirm = await showDialog<bool>(
           context: context,
@@ -530,6 +544,106 @@ class _UserCard extends ConsumerWidget {
         break;
     }
   }
+
+  // ── Reset password dialog ─────────────────────────────────
+  Future<void> _showResetPasswordDialog(BuildContext context, WidgetRef ref,
+      dynamic client, int userId, String name) async {
+    final pwdCtr  = TextEditingController();
+    bool  obscure = true;
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setS) => AlertDialog(
+          title: const Text('Reset password'),
+          content: Column(mainAxisSize: MainAxisSize.min, children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppColors.warning.withOpacity(.08),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.warning.withOpacity(.3)),
+              ),
+              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Icon(Icons.warning_amber_outlined,
+                    size: 16, color: AppColors.warning),
+                const SizedBox(width: 8),
+                Expanded(child: Text(
+                  'Setting a temporary password for $name.\n'
+                  'Resident must change it on next login.',
+                  style: const TextStyle(fontSize: 12, color: AppColors.warning),
+                )),
+              ]),
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: pwdCtr,
+              obscureText: obscure,
+              decoration: InputDecoration(
+                labelText: 'New temporary password',
+                hintText: 'Min. 6 characters',
+                border: const OutlineInputBorder(),
+                suffixIcon: IconButton(
+                  icon: Icon(obscure
+                      ? Icons.visibility_outlined
+                      : Icons.visibility_off_outlined),
+                  onPressed: () => setS(() => obscure = !obscure),
+                ),
+              ),
+            ),
+          ]),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final pwd = pwdCtr.text.trim();
+                if (pwd.length < 6) {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                    content: Text('Password must be at least 6 characters'),
+                    backgroundColor: AppColors.error,
+                  ));
+                  return;
+                }
+                Navigator.pop(ctx);
+                try {
+                  await client.post(
+                    '\${ApiEndpoints.users}/\$userId/reset-password',
+                    data: {'new_password': pwd},
+                  );
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                      content: Text(
+                        'Password reset for \$name. '
+                        'Share it securely — resident must change on next login.'),
+                      backgroundColor: AppColors.success,
+                      duration: const Duration(seconds: 4),
+                    ));
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                      content: Text('Failed to reset password. Please try again.'),
+                      backgroundColor: AppColors.error,
+                    ));
+                  }
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.warning,
+                  foregroundColor: Colors.white),
+              child: const Text('Reset password'),
+            ),
+          ],
+        ),
+      ),
+    );
+    pwdCtr.dispose();
+  }
+
 }
 
 // ── Edit User Dialog ──────────────────────────────────────────────
