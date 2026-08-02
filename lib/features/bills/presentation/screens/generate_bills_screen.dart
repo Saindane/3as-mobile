@@ -25,8 +25,8 @@ class _GenerateBillsScreenState extends ConsumerState<GenerateBillsScreen>
   int    _year        = DateTime.now().year;
   double _maintenance = 2000;
   bool   _includePenalty = true;
-  DateTime _dueDate   = DateTime(
-      DateTime.now().year, DateTime.now().month + 1, 10);
+  DateTime get _defaultDueDate => DateTime(_year, _month + 1, 10);
+  late DateTime _dueDate;
 
   // Specific unit
   int?   _selectedPropertyId;
@@ -39,6 +39,7 @@ class _GenerateBillsScreenState extends ConsumerState<GenerateBillsScreen>
   @override
   void initState() {
     super.initState();
+    _dueDate = DateTime(_year, _month + 1, 10);
     _tabs = TabController(length: 2, vsync: this);
     _tabs.addListener(() => setState(() {
       _selectedPropertyId = null;
@@ -134,7 +135,10 @@ class _GenerateBillsScreenState extends ConsumerState<GenerateBillsScreen>
               items: List.generate(12, (i) => DropdownMenuItem(
                   value: i + 1,
                   child: Text(_monthName(i + 1)))),
-              onChanged: (v) => setState(() => _month = v!),
+              onChanged: (v) => setState(() {
+                _month = v!;
+                _dueDate = DateTime(_year, _month + 1, 10);
+              }),
             ),
           ])),
           const SizedBox(width: 12),
@@ -146,7 +150,10 @@ class _GenerateBillsScreenState extends ConsumerState<GenerateBillsScreen>
               keyboardType: TextInputType.number,
               decoration: const InputDecoration(border: OutlineInputBorder(),
                   contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10)),
-              onChanged: (v) => setState(() => _year = int.tryParse(v) ?? _year),
+              onChanged: (v) => setState(() {
+                _year = int.tryParse(v) ?? _year;
+                _dueDate = DateTime(_year, _month + 1, 10);
+              }),
             ),
           ])),
         ]),
