@@ -611,13 +611,13 @@ class _UserCard extends ConsumerWidget {
                 Navigator.pop(ctx);
                 try {
                   await client.post(
-                    '\${ApiEndpoints.users}/\$userId/reset-password',
+                    '${ApiEndpoints.users}/$userId/reset-password',
                     data: {'new_password': pwd},
                   );
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                       content: Text(
-                        'Password reset for \$name. '
+                        'Password reset for $name. '
                         'Share it securely — resident must change on next login.'),
                       backgroundColor: AppColors.success,
                       duration: const Duration(seconds: 4),
