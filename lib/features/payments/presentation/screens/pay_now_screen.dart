@@ -106,10 +106,15 @@ class _PayNowScreenState extends ConsumerState<PayNowScreen> {
                 ));
               }
 
-              // Get IDs of bills that already have a pending payment submitted
+              // Get payment status per bill
               final myPaymentsAsync = ref.watch(myPaymentsProvider);
               final pendingBillIds = myPaymentsAsync.whenData((payments) =>
                 payments.where((p) => p.status.toUpperCase() == 'PENDING')
+                        .map((p) => p.billId).toSet()
+              ).valueOrNull ?? <int>{};
+
+              final rejectedBillIds = myPaymentsAsync.whenData((payments) =>
+                payments.where((p) => p.status.toUpperCase() == 'REJECTED')
                         .map((p) => p.billId).toSet()
               ).valueOrNull ?? <int>{};
 
@@ -127,38 +132,47 @@ class _PayNowScreenState extends ConsumerState<PayNowScreen> {
 
               return Column(children: bills.map((bill) {
                 final hasPendingPayment = pendingBillIds.contains(bill.billId);
+                final isRejected = rejectedBillIds.contains(bill.billId);
                 final isSettled = bill.isPaid || bill.isWaived;
-                final canPay = !isSettled && !hasPendingPayment;
+                final canPay = !isSettled && !hasPendingPayment || isRejected;
 
                 final badgeColor = isSettled
                     ? AppColors.success
-                    : hasPendingPayment
-                        ? AppColors.warning
-                        : bill.isOverdue
-                            ? AppColors.error
-                            : AppColors.warning;
+                    : isRejected
+                        ? AppColors.error
+                        : hasPendingPayment
+                            ? AppColors.warning
+                            : bill.isOverdue
+                                ? AppColors.error
+                                : AppColors.warning;
 
                 final badgeLabel = isSettled
                     ? 'Paid'
-                    : hasPendingPayment
-                        ? 'Verifying'
-                        : bill.isOverdue
-                            ? 'Overdue'
-                            : 'Pending';
+                    : isRejected
+                        ? 'Rejected'
+                        : hasPendingPayment
+                            ? 'Verifying'
+                            : bill.isOverdue
+                                ? 'Overdue'
+                                : 'Pending';
 
                 final subText = isSettled
                     ? 'Payment confirmed'
-                    : hasPendingPayment
-                        ? 'Submitted — awaiting verification'
-                        : '₹${bill.total.toStringAsFixed(0)} due';
+                    : isRejected
+                        ? 'Payment rejected — please resubmit'
+                        : hasPendingPayment
+                            ? 'Submitted — awaiting verification'
+                            : '₹${bill.total.toStringAsFixed(0)} due';
 
                 final subColor = isSettled
                     ? AppColors.success
-                    : hasPendingPayment
-                        ? AppColors.warning
-                        : bill.isOverdue
-                            ? AppColors.error
-                            : AppColors.textSecondary;
+                    : isRejected
+                        ? AppColors.error
+                        : hasPendingPayment
+                            ? AppColors.warning
+                            : bill.isOverdue
+                                ? AppColors.error
+                                : AppColors.textSecondary;
 
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 8),
