@@ -37,7 +37,6 @@ class _GenerateBillsScreenState extends ConsumerState<GenerateBillsScreen>
   int?   _selectedPropertyId;
   String _selectedUnitNo = '';
   String _searchQuery   = '';
-  late TextEditingController _maintenanceCtr;
   bool   _isLoading     = false;
   Map<String, dynamic>? _result;
   String? _error;
@@ -48,7 +47,6 @@ class _GenerateBillsScreenState extends ConsumerState<GenerateBillsScreen>
     _dueDate = DateTime.now().month == 12
         ? DateTime(DateTime.now().year + 1, 1, 10)
         : DateTime(DateTime.now().year, DateTime.now().month + 1, 10);
-    _maintenanceCtr = TextEditingController(text: _maintenance.toStringAsFixed(0));
     _tabs = TabController(length: 2, vsync: this);
     _tabs.addListener(() => setState(() {
       _selectedPropertyId = null;
@@ -59,7 +57,7 @@ class _GenerateBillsScreenState extends ConsumerState<GenerateBillsScreen>
   }
 
   @override
-  void dispose() { _tabs.dispose(); _maintenanceCtr.dispose(); super.dispose(); }
+  void dispose() { _tabs.dispose(); super.dispose(); }
 
   Future<void> _generate() async {
     // Validate specific unit mode
@@ -185,14 +183,15 @@ class _GenerateBillsScreenState extends ConsumerState<GenerateBillsScreen>
             const Text('Maintenance (₹)', style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
             const SizedBox(height: 4),
             TextFormField(
-              controller: _maintenanceCtr,
+              key: ValueKey(_maintenance),
+              initialValue: _maintenance.toStringAsFixed(0),
               keyboardType: TextInputType.number,
               decoration: const InputDecoration(
                 border: OutlineInputBorder(),
                 prefixText: '₹ ',
                 contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               ),
-              onChanged: (v) => setState(() => _maintenance = double.tryParse(v) ?? _maintenance),
+              onChanged: (v) => _maintenance = double.tryParse(v) ?? _maintenance,
             ),
           ])),
           const SizedBox(width: 12),
