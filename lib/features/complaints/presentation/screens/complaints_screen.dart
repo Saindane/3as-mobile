@@ -128,6 +128,21 @@ class _ComplaintList extends ConsumerWidget {
   }
 }
 
+String _formatDate(String iso) {
+  try {
+    final dt   = DateTime.parse(iso).toLocal();
+    final now  = DateTime.now();
+    final diff = now.difference(dt);
+    final time = '${dt.hour.toString().padLeft(2,'0')}:${dt.minute.toString().padLeft(2,'0')}';
+    if (diff.inDays == 0)  return 'Today at $time';
+    if (diff.inDays == 1)  return 'Yesterday at $time';
+    if (diff.inDays < 7)   return '${diff.inDays} days ago at $time';
+    return '${dt.day}/${dt.month}/${dt.year} at $time';
+  } catch (_) {
+    return iso.length >= 10 ? iso.substring(0, 10) : iso;
+  }
+}
+
 class ComplaintCard extends ConsumerWidget {
   final ComplaintModel complaint;
   final bool isAdmin;
@@ -183,6 +198,12 @@ class ComplaintCard extends ConsumerWidget {
                 maxLines: 1, overflow: TextOverflow.ellipsis),
             Text(
               '#${complaint.complaintId} · ${complaint.category}'
+            const SizedBox(height: 2),
+            Text(
+              _formatDate(complaint.createdAt),
+              style: AppTextStyles.caption.copyWith(
+                  color: AppColors.textMuted, fontSize: 11),
+            ),
               '${complaint.unitNo != null ? ' · Unit ${complaint.unitNo}' : ''}',
               style: AppTextStyles.caption,
             ),
