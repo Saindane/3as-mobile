@@ -198,14 +198,14 @@ class ComplaintCard extends ConsumerWidget {
                 maxLines: 1, overflow: TextOverflow.ellipsis),
             Text(
               '#${complaint.complaintId} · ${complaint.category}'
+              '${complaint.unitNo != null ? ' · Unit ${complaint.unitNo}' : ''}' ,
+              style: AppTextStyles.caption,
+            ),
             const SizedBox(height: 2),
             Text(
               _formatDate(complaint.createdAt),
               style: AppTextStyles.caption.copyWith(
                   color: AppColors.textMuted, fontSize: 11),
-            ),
-              '${complaint.unitNo != null ? ' · Unit ${complaint.unitNo}' : ''}',
-              style: AppTextStyles.caption,
             ),
           ])),
           Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
