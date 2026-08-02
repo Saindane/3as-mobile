@@ -155,11 +155,13 @@ class ResidentDashboardScreen extends ConsumerWidget {
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 10),
                     child: AppCard(
-                      borderColor: isOverdue
+                      borderColor: isRejected
                           ? AppColors.error.withOpacity(.5)
-                          : hasSubmitted
-                              ? AppColors.warning.withOpacity(.5)
-                              : AppColors.primary.withOpacity(.3),
+                          : isOverdue
+                              ? AppColors.error.withOpacity(.5)
+                              : hasSubmitted
+                                  ? AppColors.warning.withOpacity(.5)
+                                  : AppColors.primary.withOpacity(.3),
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                         // Header row
                         Row(children: [
@@ -167,27 +169,35 @@ class ResidentDashboardScreen extends ConsumerWidget {
                             Text('${_monthName(bill.month)} ${bill.year}',
                                 style: AppTextStyles.bodyBold),
                             Text(
-                              hasSubmitted
-                                  ? 'Payment submitted — awaiting verification'
-                                  : isOverdue
-                                      ? 'Overdue — penalty accruing daily'
-                                      : bill.dueDate != null ? 'Due by ${bill.dueDate}' : 'Payment pending',
+                              isRejected
+                                  ? 'Payment rejected — please resubmit'
+                                  : hasSubmitted
+                                      ? 'Payment submitted — awaiting verification'
+                                      : isOverdue
+                                          ? 'Overdue — penalty accruing daily'
+                                          : bill.dueDate != null ? 'Due by ${bill.dueDate}' : 'Payment pending',
                               style: AppTextStyles.caption.copyWith(
-                                color: hasSubmitted
-                                    ? AppColors.warning
-                                    : isOverdue
-                                        ? AppColors.error
-                                        : AppColors.textMuted,
+                                color: isRejected
+                                    ? AppColors.error
+                                    : hasSubmitted
+                                        ? AppColors.warning
+                                        : isOverdue
+                                            ? AppColors.error
+                                            : AppColors.textMuted,
                               ),
                             ),
                           ])),
                           AppBadge(
-                            label: hasSubmitted
-                                ? 'Verifying'
-                                : isOverdue ? 'Overdue' : 'Pending',
-                            color: hasSubmitted
-                                ? AppColors.warning
-                                : isOverdue ? AppColors.error : AppColors.warning,
+                            label: isRejected
+                                ? 'Rejected'
+                                : hasSubmitted
+                                    ? 'Verifying'
+                                    : isOverdue ? 'Overdue' : 'Pending',
+                            color: isRejected
+                                ? AppColors.error
+                                : hasSubmitted
+                                    ? AppColors.warning
+                                    : isOverdue ? AppColors.error : AppColors.warning,
                           ),
                         ]),
 

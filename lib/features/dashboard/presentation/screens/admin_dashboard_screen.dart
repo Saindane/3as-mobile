@@ -48,8 +48,33 @@ class AdminDashboardScreen extends ConsumerWidget {
             error:   (_, __) => const SizedBox(),
             data: (profile) => Column(
                 crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('${_greeting()}, ${profile.name.split(' ').first} 👋',
-                  style: AppTextStyles.heading2),
+              Row(children: [
+                Expanded(child: Text('${_greeting()}, ${profile.name.split(' ').first} 👋',
+                    style: AppTextStyles.heading2)),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: profile.role.toUpperCase() == 'ADMIN'
+                        ? const Color(0xFF7C3AED).withOpacity(.1)
+                        : AppColors.warning.withOpacity(.1),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: profile.role.toUpperCase() == 'ADMIN'
+                          ? const Color(0xFF7C3AED).withOpacity(.3)
+                          : AppColors.warning.withOpacity(.3),
+                    ),
+                  ),
+                  child: Text(
+                    profile.role.toUpperCase() == 'ADMIN'
+                        ? 'Administrator' : 'Management',
+                    style: TextStyle(
+                      fontSize: 11, fontWeight: FontWeight.w600,
+                      color: profile.role.toUpperCase() == 'ADMIN'
+                          ? const Color(0xFF7C3AED) : AppColors.warning,
+                    ),
+                  ),
+                ),
+              ]),
               Text(
                 'Full system overview — ${_monthName(now.month)} ${now.year}',
                 style: AppTextStyles.body
