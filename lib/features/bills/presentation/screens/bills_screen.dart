@@ -5,6 +5,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../shared/widgets/stat_card.dart';
 import '../../data/models/bill_model.dart';
 import '../providers/bill_provider.dart';
+import '../../../payments/presentation/providers/payment_provider.dart';
 import '../widgets/bill_card.dart';
 import 'bill_detail_screen.dart';
 import 'generate_bills_screen.dart';
@@ -121,21 +122,41 @@ class _BillsList extends ConsumerWidget {
           );
         }
 
+        // Get payment status per bill for resident
+        final paymentsAsync = widget.isAdmin
+            ? const AsyncData(<dynamic>[])
+            : ref.watch(myPaymentsProvider);
+        final pendingBillIds = paymentsAsync.valueOrNull
+            ?.where((p) => p.status.toUpperCase() == 'PENDING')
+            .map((p) => p.billId).toSet() ?? <int>{};
+        final rejectedBillIds = paymentsAsync.valueOrNull
+            ?.where((p) => p.status.toUpperCase() == 'REJECTED')
+            .map((p) => p.billId).toSet() ?? <int>{};
+
         return RefreshIndicator(
           onRefresh: () async {
             ref.invalidate(myBillsProvider);
             ref.invalidate(allBillsProvider);
+            if (!widget.isAdmin) ref.invalidate(myPaymentsProvider);
           },
           child: ListView.separated(
             padding: const EdgeInsets.all(16),
             itemCount: filtered.length,
             separatorBuilder: (_, __) => const SizedBox(height: 8),
-            itemBuilder: (_, i) => BillCard(
-              bill: filtered[i],
-              onTap: () => Navigator.push(context, MaterialPageRoute(
-                builder: (_) => BillDetailScreen(billId: filtered[i].billId),
-              )),
-            ),
+            itemBuilder: (_, i) {
+              final bill = filtered[i];
+              final isPending  = pendingBillIds.contains(bill.billId);
+              final isRejected = rejectedBillIds.contains(bill.billId);
+              return BillCard(
+                bill: bill,
+                paymentStatus: isPending  ? 'PENDING'
+                             : isRejected ? 'REJECTED'
+                             : null,
+                onTap: () => Navigator.push(context, MaterialPageRoute(
+                  builder: (_) => BillDetailScreen(billId: bill.billId),
+                )),
+              );
+            },
           ),
         );
       },

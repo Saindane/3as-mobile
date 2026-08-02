@@ -6,22 +6,38 @@ import '../../data/models/bill_model.dart';
 class BillCard extends StatelessWidget {
   final BillModel bill;
   final VoidCallback? onTap;
+  final String? paymentStatus; // 'PENDING', 'REJECTED', or null
 
-  const BillCard({super.key, required this.bill, this.onTap});
+  const BillCard({super.key, required this.bill, this.onTap, this.paymentStatus});
 
-  Color get _statusColor => switch (bill.status.toUpperCase()) {
-        'PAID'    => AppColors.success,
-        'OVERDUE' => AppColors.error,
-        'WAIVED'  => AppColors.textMuted,
-        _         => AppColors.warning,
-      };
+  Color get _statusColor {
+    if (paymentStatus == 'REJECTED') return AppColors.error;
+    if (paymentStatus == 'PENDING')  return AppColors.warning;
+    return switch (bill.status.toUpperCase()) {
+      'PAID'    => AppColors.success,
+      'OVERDUE' => AppColors.error,
+      'WAIVED'  => AppColors.textMuted,
+      _         => AppColors.warning,
+    };
+  }
 
-  IconData get _statusIcon => switch (bill.status.toUpperCase()) {
-        'PAID'    => Icons.check_circle_outline,
-        'OVERDUE' => Icons.warning_amber_outlined,
-        'WAIVED'  => Icons.do_disturb_alt_outlined,
-        _         => Icons.pending_outlined,
-      };
+  IconData get _statusIcon {
+    if (paymentStatus == 'REJECTED') return Icons.cancel_outlined;
+    if (paymentStatus == 'PENDING')  return Icons.pending_outlined;
+    return switch (bill.status.toUpperCase()) {
+      'PAID'    => Icons.check_circle_outline,
+      'OVERDUE' => Icons.warning_amber_outlined,
+      'WAIVED'  => Icons.do_disturb_alt_outlined,
+      _         => Icons.pending_outlined,
+    };
+  }
+
+  String get _badgeLabel {
+    if (paymentStatus == 'REJECTED') return 'Rejected';
+    if (paymentStatus == 'PENDING')  return 'Verifying';
+    final s = bill.status.toUpperCase();
+    return s[0] + s.substring(1).toLowerCase();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -46,7 +62,7 @@ class BillCard extends StatelessWidget {
               Text('Unit ${bill.unitNo}', style: AppTextStyles.caption),
           ])),
           AppBadge(
-            label: bill.status[0].toUpperCase() + bill.status.substring(1).toLowerCase(),
+            label: _badgeLabel,
             color: _statusColor,
           ),
         ]),
@@ -70,6 +86,41 @@ class BillCard extends StatelessWidget {
             color: bill.isOverdue ? AppColors.error : AppColors.text,
           ),
         ]),
+
+        // Payment status banner
+        if (paymentStatus == 'REJECTED') ...[
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: AppColors.error.withOpacity(.08),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: AppColors.error.withOpacity(.3)),
+            ),
+            child: const Row(children: [
+              Icon(Icons.cancel_outlined, size: 13, color: AppColors.error),
+              SizedBox(width: 6),
+              Text('Payment rejected — please resubmit',
+                  style: TextStyle(fontSize: 11, color: AppColors.error)),
+            ]),
+          ),
+        ] else if (paymentStatus == 'PENDING') ...[
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: AppColors.warning.withOpacity(.08),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: AppColors.warning.withOpacity(.3)),
+            ),
+            child: const Row(children: [
+              Icon(Icons.pending_outlined, size: 13, color: AppColors.warning),
+              SizedBox(width: 6),
+              Text('Payment submitted — awaiting verification',
+                  style: TextStyle(fontSize: 11, color: AppColors.warning)),
+            ]),
+          ),
+        ],
 
         // Penalty formula banner
         if (bill.haspenalty) ...[
