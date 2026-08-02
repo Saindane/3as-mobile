@@ -228,6 +228,40 @@ class ComplaintCard extends ConsumerWidget {
               maxLines: 2, overflow: TextOverflow.ellipsis),
         ],
 
+        // Resolved info
+        if (complaint.status.toUpperCase() == 'RESOLVED' ||
+            complaint.status.toUpperCase() == 'CLOSED') ...[
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: AppColors.success.withOpacity(.08),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: AppColors.success.withOpacity(.3)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(children: [
+                  const Icon(Icons.check_circle_outline,
+                      size: 13, color: AppColors.success),
+                  const SizedBox(width: 6),
+                  Text('Resolved on ${_formatDate(complaint.updatedAt)}',
+                      style: const TextStyle(
+                          fontSize: 11, color: AppColors.success,
+                          fontWeight: FontWeight.w600)),
+                ]),
+                if (complaint.resolution != null) ...[
+                  const SizedBox(height: 4),
+                  Text(complaint.resolution!,
+                      style: const TextStyle(
+                          fontSize: 11, color: AppColors.success)),
+                ],
+              ],
+            ),
+          ),
+        ],
+
         // Admin actions
         if (isAdmin && complaint.isOpen) ...[
           const SizedBox(height: 10),
