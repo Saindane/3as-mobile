@@ -219,7 +219,14 @@ class _AppShellState extends ConsumerState<AppShell> {
                   ..._navItems.map((item) => _SidebarItem(
                     item:     item,
                     selected: _selectedIndex == item.index,
-                    onTap:    () => setState(() => _selectedIndex = item.index),
+                    onTap: () {
+                      setState(() => _selectedIndex = item.index);
+                      // Refresh payments when Pay Now tab selected
+                      if (item.index == 2 && widget.userRole.toUpperCase() == 'RESIDENT') {
+                        ref.invalidate(myPaymentsProvider);
+                        ref.invalidate(myBillsProvider);
+                      }
+                    },
                   )),
                 ],
               ),
@@ -344,7 +351,15 @@ class _AppShellState extends ConsumerState<AppShell> {
       body: _currentPage,
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: clampedIndex,
-        onTap: (i) => setState(() => _selectedIndex = mobileItems[i].index),
+        onTap: (i) {
+          setState(() => _selectedIndex = mobileItems[i].index);
+          // Refresh payments when Pay Now tab selected (index 2 for resident)
+          final item = mobileItems[i];
+          if (item.index == 2 && widget.userRole.toUpperCase() == 'RESIDENT') {
+            ref.invalidate(myPaymentsProvider);
+            ref.invalidate(myBillsProvider);
+          }
+        },
         type: BottomNavigationBarType.fixed,
         selectedItemColor: AppColors.primary,
         unselectedItemColor: AppColors.textMuted,
