@@ -25,13 +25,19 @@ class _GenerateBillsScreenState extends ConsumerState<GenerateBillsScreen>
   int    _year        = DateTime.now().year;
   double _maintenance = 2000;
   bool   _includePenalty = true;
-  DateTime get _defaultDueDate => DateTime(_year, _month + 1, 10);
+  DateTime get _defaultDueDate {
+    // Handle December → due date is January of next year
+    final dueMonth = _month == 12 ? 1 : _month + 1;
+    final dueYear  = _month == 12 ? _year + 1 : _year;
+    return DateTime(dueYear, dueMonth, 10);
+  }
   late DateTime _dueDate;
 
   // Specific unit
   int?   _selectedPropertyId;
   String _selectedUnitNo = '';
   String _searchQuery   = '';
+  late TextEditingController _maintenanceCtr;
   bool   _isLoading     = false;
   Map<String, dynamic>? _result;
   String? _error;
@@ -39,7 +45,10 @@ class _GenerateBillsScreenState extends ConsumerState<GenerateBillsScreen>
   @override
   void initState() {
     super.initState();
-    _dueDate = DateTime(_year, _month + 1, 10);
+    _dueDate = DateTime.now().month == 12
+        ? DateTime(DateTime.now().year + 1, 1, 10)
+        : DateTime(DateTime.now().year, DateTime.now().month + 1, 10);
+    _maintenanceCtr = TextEditingController(text: _maintenance.toStringAsFixed(0));
     _tabs = TabController(length: 2, vsync: this);
     _tabs.addListener(() => setState(() {
       _selectedPropertyId = null;
@@ -50,7 +59,7 @@ class _GenerateBillsScreenState extends ConsumerState<GenerateBillsScreen>
   }
 
   @override
-  void dispose() { _tabs.dispose(); super.dispose(); }
+  void dispose() { _tabs.dispose(); _maintenanceCtr.dispose(); super.dispose(); }
 
   Future<void> _generate() async {
     // Validate specific unit mode
@@ -81,11 +90,21 @@ class _GenerateBillsScreenState extends ConsumerState<GenerateBillsScreen>
       ref.invalidate(myBillsProvider);
       ref.invalidate(dashboardStatsProvider);
 
-      setState(() { _result = data; _isLoading = false; });
+      // Check if all bills were skipped
+      if (data['generated'] == 0 && (data['skipped'] ?? 0) > 0) {
+        setState(() {
+          _error = 'Bills already generated for this period. ${data['skipped']} bill(s) skipped.';
+          _isLoading = false;
+        });
+      } else {
+        setState(() { _result = data; _isLoading = false; });
+      }
     } catch (e) {
-      String msg = e.toString().toLowerCase().contains('already exist')
-          ? 'Bills already generated for this period'
-          : 'Failed to generate bills. Please try again.';
+      final msg = e.toString().toLowerCase().contains('not found')
+          ? 'Unit not found. Please select a valid unit.'
+          : e.toString().toLowerCase().contains('404')
+              ? 'Unit not found.'
+              : 'Failed to generate bills. Please try again.';
       setState(() { _error = msg; _isLoading = false; });
     }
   }
@@ -137,7 +156,7 @@ class _GenerateBillsScreenState extends ConsumerState<GenerateBillsScreen>
                   child: Text(_monthName(i + 1)))),
               onChanged: (v) => setState(() {
                 _month = v!;
-                _dueDate = DateTime(_year, _month + 1, 10);
+                _dueDate = _defaultDueDate;
               }),
             ),
           ])),
@@ -152,7 +171,7 @@ class _GenerateBillsScreenState extends ConsumerState<GenerateBillsScreen>
                   contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10)),
               onChanged: (v) => setState(() {
                 _year = int.tryParse(v) ?? _year;
-                _dueDate = DateTime(_year, _month + 1, 10);
+                _dueDate = _defaultDueDate;
               }),
             ),
           ])),
@@ -166,7 +185,7 @@ class _GenerateBillsScreenState extends ConsumerState<GenerateBillsScreen>
             const Text('Maintenance (₹)', style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
             const SizedBox(height: 4),
             TextFormField(
-              initialValue: _maintenance.toStringAsFixed(0),
+              controller: _maintenanceCtr,
               keyboardType: TextInputType.number,
               decoration: const InputDecoration(
                 border: OutlineInputBorder(),
