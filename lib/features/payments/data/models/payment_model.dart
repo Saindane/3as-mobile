@@ -34,8 +34,8 @@ class PaymentModel {
         mode:       j['mode']        as String,
         status:     j['status']      as String,
         verifiedBy: j['verified_by'] as int?,
-        verifiedAt: j['verified_at'] as String?,
-        createdAt:  j['created_at']  as String,
+        verifiedAt: j['verified_at']?.toString(),
+        createdAt:  j['created_at']?.toString() ?? '',
         unitNo:     j['unit_no']     as String?,
       );
 
