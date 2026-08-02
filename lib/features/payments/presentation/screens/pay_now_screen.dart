@@ -26,6 +26,11 @@ class _PayNowScreenState extends ConsumerState<PayNowScreen> {
   @override
   void initState() {
     super.initState();
+    // Refresh every time Pay Now opens so rejected/verified status is current
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.invalidate(myPaymentsProvider);
+      ref.invalidate(myBillsProvider);
+    });
     if (widget.billId != null) {
       _selectedBillId = widget.billId;
       _selectedAmount = widget.amount ?? 0;
@@ -91,7 +96,13 @@ class _PayNowScreenState extends ConsumerState<PayNowScreen> {
         if (_step == 0) ...[
           Text('Select bill to pay', style: AppTextStyles.heading3),
           const SizedBox(height: 14),
-          ref.watch(myBillsProvider).when(
+          RefreshIndicator(
+            onRefresh: () async {
+              ref.invalidate(myBillsProvider);
+              ref.invalidate(myPaymentsProvider);
+              await Future.delayed(const Duration(milliseconds: 500));
+            },
+            child: ref.watch(myBillsProvider).when(
             loading: () => const Center(child: CircularProgressIndicator()),
             error:   (e, _) => Text('Error: $e'),
             data: (bills) {
