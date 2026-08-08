@@ -8,10 +8,10 @@ class AppConstants {
   // ── API ────────────────────────────────────────────────
   // Auto-selects correct URL based on platform
   // ── PRODUCTION URL — update before deploying ──────────
-  static const String _productionUrl = 'https://YOUR-RAILWAY-URL.up.railway.app/api/v1';
+  static const String _productionUrl = 'https://3as-backend-production.up.railway.app/api/v1';
 
   // ── DEVELOPMENT URL ────────────────────────────────────
-  static const bool _isProduction = false; // Set to true before building for production
+  static const bool _isProduction = true; // Set to true before building for production
 
   static String get baseUrl {
     if (_isProduction) {
