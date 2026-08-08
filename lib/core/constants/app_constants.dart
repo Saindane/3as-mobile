@@ -1,17 +1,27 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 
 class AppConstants {
+  // ── DEPLOYMENT: Update baseUrl to your Railway URL before building ──
+  // Example: 'https://3as-backend-production.up.railway.app/api/v1'
   AppConstants._();
 
   // ── API ────────────────────────────────────────────────
   // Auto-selects correct URL based on platform
+  // ── PRODUCTION URL — update before deploying ──────────
+  static const String _productionUrl = 'https://YOUR-RAILWAY-URL.up.railway.app/api/v1';
+
+  // ── DEVELOPMENT URL ────────────────────────────────────
+  static const bool _isProduction = false; // Set to true before building for production
+
   static String get baseUrl {
+    if (_isProduction) {
+      return _productionUrl;
+    }
+    // Development
     if (kIsWeb) {
       return 'http://localhost:8000/api/v1'; // Flutter web (Chrome)
     }
     return 'http://10.0.2.2:8000/api/v1';   // Android emulator
-    // For iOS simulator use: http://localhost:8000/api/v1
-    // For physical device use your machine's local IP e.g.: http://192.168.1.5:8000/api/v1
   }
 
   static const int connectTimeout = 30000; // ms
