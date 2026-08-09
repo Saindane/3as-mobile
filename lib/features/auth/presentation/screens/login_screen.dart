@@ -155,31 +155,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                 const SizedBox(height: 8),
 
-                // Forgot password
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: () {
-                      final mobile = _mobileCtr.text.trim();
-                      if (mobile.isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                          content: Text('Please enter your mobile number first'),
-                          backgroundColor: AppColors.error,
-                        ));
-                        return;
-                      }
-                      context.push('/otp', extra: {
-                        'mobile': mobile,
-                        'purpose': 'password_reset',
-                      });
-                    },
-                    child: Text('Forgot password?',
-                        style: AppTextStyles.body.copyWith(color: AppColors.primary)),
-                  ),
-                ),
-
-                const SizedBox(height: 8),
-
                 // Login button
                 ElevatedButton(
                   onPressed: loginState.isLoading ? null : _submit,
