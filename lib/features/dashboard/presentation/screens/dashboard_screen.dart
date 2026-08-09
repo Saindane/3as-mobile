@@ -552,7 +552,6 @@ class _UserCard extends ConsumerWidget {
                 duration: const Duration(seconds: 5),
               ));
             }
-            }
           }
         }
         break;
