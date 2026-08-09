@@ -498,7 +498,9 @@ class _UserCard extends ConsumerWidget {
           } catch (e) {
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content: Text('Error: \$e'), backgroundColor: AppColors.error));
+                content: Text('Error: $e'),
+                backgroundColor: AppColors.error,
+              ));
             }
           }
         }
@@ -530,14 +532,26 @@ class _UserCard extends ConsumerWidget {
             ref.invalidate(usersListProvider);
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content: Text('$name deleted'),
-                backgroundColor: AppColors.error,
+                content: Text('$name deleted successfully'),
+                backgroundColor: AppColors.success,
               ));
             }
           } catch (e) {
             if (context.mounted) {
+              String msg = 'Failed to delete. Please try again.';
+              final err = e.toString();
+              if (err.contains('Cannot delete') || err.contains('attached to Unit')) {
+                msg = 'Cannot delete $name — they are assigned to a property. '
+                      'Please remove them as unit owner first.';
+              } else if (err.contains('400')) {
+                msg = 'Cannot delete — user is attached to a property.';
+              }
               ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content: Text('Error: \$e'), backgroundColor: AppColors.error));
+                content: Text(msg),
+                backgroundColor: AppColors.error,
+                duration: const Duration(seconds: 5),
+              ));
+            }
             }
           }
         }
