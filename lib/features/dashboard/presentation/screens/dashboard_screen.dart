@@ -1048,13 +1048,23 @@ class _PropertyCard extends ConsumerWidget {
           onSelected: (action) => _handleAction(context, ref, action, propertyId, unitNo),
           itemBuilder: (_) => [
             const PopupMenuItem(
-              value: 'delete',
+              value: 'edit',
               child: Row(children: [
-                Icon(Icons.delete_outline, size: 16, color: AppColors.error),
+                Icon(Icons.edit_outlined, size: 16, color: AppColors.primary),
                 SizedBox(width: 8),
-                Text('Delete', style: TextStyle(color: AppColors.error)),
+                Text('Edit'),
               ]),
             ),
+            // Delete property — Admin only
+            if (TokenStore.role?.toUpperCase() == 'ADMIN')
+              const PopupMenuItem(
+                value: 'delete',
+                child: Row(children: [
+                  Icon(Icons.delete_outline, size: 16, color: AppColors.error),
+                  SizedBox(width: 8),
+                  Text('Delete', style: TextStyle(color: AppColors.error)),
+                ]),
+              ),
           ],
         ),
       ]),
