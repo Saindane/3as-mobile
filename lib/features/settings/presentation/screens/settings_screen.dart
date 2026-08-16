@@ -200,27 +200,30 @@ class SettingsScreen extends ConsumerWidget {
             const SizedBox(height: 20),
 
             // ── Notifications ────────────────────────────────
-            const SectionHeader(title: 'Notifications'),
-            const SizedBox(height: 8),
-            AppCard(child: Column(children: [
-              _SwitchRow(
-                icon: Icons.notifications_outlined,
-                label: 'FCM push notifications',
-                subtitle: 'Bills, payments, complaints',
-                value: map['fcm_enabled'] == 'true',
-                onChanged: (v) => _updateSetting(context, ref, 'fcm_enabled', v.toString()),
-              ),
-              const Divider(height: 1),
-              _SwitchRow(
-                icon: Icons.sms_outlined,
-                label: 'SMS notifications',
-                subtitle: 'OTP and alerts via SMS',
-                value: map['sms_enabled'] == 'true',
-                onChanged: (v) => _updateSetting(context, ref, 'sms_enabled', v.toString()),
-              ),
-            ])),
-
-            const SizedBox(height: 20),
+            // Hidden from UI for now — to be released later.
+            // Set to true to re-enable; code/backend untouched.
+            if (false) ...[
+              const SectionHeader(title: 'Notifications'),
+              const SizedBox(height: 8),
+              AppCard(child: Column(children: [
+                _SwitchRow(
+                  icon: Icons.notifications_outlined,
+                  label: 'FCM push notifications',
+                  subtitle: 'Bills, payments, complaints',
+                  value: map['fcm_enabled'] == 'true',
+                  onChanged: (v) => _updateSetting(context, ref, 'fcm_enabled', v.toString()),
+                ),
+                const Divider(height: 1),
+                _SwitchRow(
+                  icon: Icons.sms_outlined,
+                  label: 'SMS notifications',
+                  subtitle: 'OTP and alerts via SMS',
+                  value: map['sms_enabled'] == 'true',
+                  onChanged: (v) => _updateSetting(context, ref, 'sms_enabled', v.toString()),
+                ),
+              ])),
+              const SizedBox(height: 20),
+            ],
           ]);
         },
       ),
