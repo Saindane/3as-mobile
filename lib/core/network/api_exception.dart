@@ -12,11 +12,11 @@ class ApiException implements Exception {
       case DioExceptionType.sendTimeout:
       case DioExceptionType.receiveTimeout:
         return const ApiException(
-            message: 'Connection timed out. Make sure the backend is running.');
+            message: 'The request is taking longer than expected. Please check your connection and try again.');
 
       case DioExceptionType.connectionError:
         return const ApiException(
-            message: 'Cannot reach server. Check that backend is running on localhost:8000.');
+            message: 'Unable to connect. Please check your internet connection and try again.');
 
       case DioExceptionType.badResponse:
         final statusCode = e.response?.statusCode;
