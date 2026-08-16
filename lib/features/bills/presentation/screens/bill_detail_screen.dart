@@ -51,16 +51,6 @@ class _BillDetailView extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text('${bill.monthName} ${bill.year}'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.download_outlined),
-            tooltip: 'Download PDF',
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Bill PDF downloaded')));
-            },
-          ),
-        ],
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
