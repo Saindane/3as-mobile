@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../shared/widgets/stat_card.dart';
@@ -288,50 +289,67 @@ class _PayNowScreenState extends ConsumerState<PayNowScreen> {
 
           // QR code
           AppCard(child: Column(children: [
-            Row(children: [
-              // QR placeholder
-              Container(
-                width: 90, height: 90,
-                decoration: BoxDecoration(
-                  border: Border.all(color: AppColors.border),
-                  borderRadius: BorderRadius.circular(8),
+            Consumer(builder: (ctx, ref, _) {
+              final settings = ref.watch(settingsProvider);
+              final map = settings.whenData((list) =>
+                  { for (var s in list) s['key'] as String : s['value'] as String }
+              ).valueOrNull ?? <String, String>{};
+              final upiId = map['upi_id'] ?? '3ascomplex@upi';
+              final payeeName = map['society_name'] ?? '3As Complex';
+              final upiUri = Uri(
+                scheme: 'upi',
+                host: 'pay',
+                queryParameters: {
+                  'pa': upiId,
+                  'pn': payeeName,
+                  'am': _selectedAmount.toStringAsFixed(2),
+                  'cu': 'INR',
+                  if (_selectedBillId != null) 'tn': 'Bill #$_selectedBillId',
+                },
+              ).toString();
+
+              return Row(children: [
+                // Real scannable UPI QR code
+                Container(
+                  width: 90, height: 90,
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: AppColors.border),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: QrImageView(
+                    data: upiUri,
+                    version: QrVersions.auto,
+                    backgroundColor: Colors.white,
+                    padding: EdgeInsets.zero,
+                  ),
                 ),
-                child: const Icon(Icons.qr_code_2, size: 70, color: AppColors.text),
-              ),
-              const SizedBox(width: 16),
-              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Text('Scan & pay via UPI', style: TextStyle(fontWeight: FontWeight.w600)),
-                const SizedBox(height: 6),
-                const Text('UPI ID:', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
-                Row(children: [
-                  Consumer(builder: (ctx, ref, _) {
-                    final settings = ref.watch(settingsProvider);
-                    final upiId = settings.whenData((list) {
-                      final map = { for (var s in list) s['key'] as String : s['value'] as String };
-                      return map['upi_id'] ?? '3ascomplex@upi';
-                    }).valueOrNull ?? '3ascomplex@upi';
-                    return Row(children: [
-                      Text(upiId, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600,
-                          color: AppColors.primary)),
-                      const SizedBox(width: 4),
-                      GestureDetector(
-                        onTap: () {
-                          Clipboard.setData(ClipboardData(text: upiId));
-                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                              content: Text('UPI ID copied')));
-                        },
-                        child: const Icon(Icons.copy, size: 14, color: AppColors.textMuted),
-                      ),
-                    ]);
-                  }),
-                ]),
-                const SizedBox(height: 6),
-                const Text('Or use NEFT/RTGS:',
-                    style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
-                const Text('A/c: 1234 5678 9012\nIFSC: HDFC0001234',
-                    style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
-              ])),
-            ]),
+                const SizedBox(width: 16),
+                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  const Text('Scan & pay via UPI', style: TextStyle(fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 6),
+                  const Text('UPI ID:', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
+                  Row(children: [
+                    Text(upiId, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600,
+                        color: AppColors.primary)),
+                    const SizedBox(width: 4),
+                    GestureDetector(
+                      onTap: () {
+                        Clipboard.setData(ClipboardData(text: upiId));
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                            content: Text('UPI ID copied')));
+                      },
+                      child: const Icon(Icons.copy, size: 14, color: AppColors.textMuted),
+                    ),
+                  ]),
+                  const SizedBox(height: 6),
+                  const Text('Or use NEFT/RTGS:',
+                      style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
+                  const Text('A/c: 1234 5678 9012\nIFSC: HDFC0001234',
+                      style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                ])),
+              ]);
+            }),
           ])),
           const SizedBox(height: 20),
 
