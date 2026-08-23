@@ -168,39 +168,44 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                 const SizedBox(height: 32),
 
-                // Divider
-                Row(children: [
-                  const Expanded(child: Divider()),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: Text('or sign in as demo user', style: AppTextStyles.caption),
+                // Demo accounts — hidden on live app (exposes real
+                // seeded account names/roles and allows one-tap login
+                // without a password prompt). Kept for testing/demos;
+                // set to true to re-enable.
+                if (false) ...[
+                  // Divider
+                  Row(children: [
+                    const Expanded(child: Divider()),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Text('or sign in as demo user', style: AppTextStyles.caption),
+                    ),
+                    const Expanded(child: Divider()),
+                  ]),
+
+                  const SizedBox(height: 16),
+
+                  _DemoCard(
+                    initials: 'RK', name: 'Rajesh Kumar',
+                    subtitle: 'Resident · Unit 4B · 98765 43210',
+                    color: AppColors.primary,
+                    onTap: () => _quickLogin('9876543210', 'demo1234'),
                   ),
-                  const Expanded(child: Divider()),
-                ]),
-
-                const SizedBox(height: 16),
-
-                // Demo accounts
-                _DemoCard(
-                  initials: 'RK', name: 'Rajesh Kumar',
-                  subtitle: 'Resident · Unit 4B · 98765 43210',
-                  color: AppColors.primary,
-                  onTap: () => _quickLogin('9876543210', 'demo1234'),
-                ),
-                const SizedBox(height: 8),
-                _DemoCard(
-                  initials: 'PM', name: 'Priya Menon',
-                  subtitle: 'Management · 87654 32109',
-                  color: AppColors.warning,
-                  onTap: () => _quickLogin('8765432109', 'demo1234'),
-                ),
-                const SizedBox(height: 8),
-                _DemoCard(
-                  initials: 'SA', name: 'Suresh Admin',
-                  subtitle: 'Administrator · 76543 21098',
-                  color: const Color(0xFF7C3AED),
-                  onTap: () => _quickLogin('7654321098', 'demo1234'),
-                ),
+                  const SizedBox(height: 8),
+                  _DemoCard(
+                    initials: 'PM', name: 'Priya Menon',
+                    subtitle: 'Management · 87654 32109',
+                    color: AppColors.warning,
+                    onTap: () => _quickLogin('8765432109', 'demo1234'),
+                  ),
+                  const SizedBox(height: 8),
+                  _DemoCard(
+                    initials: 'SA', name: 'Suresh Admin',
+                    subtitle: 'Administrator · 76543 21098',
+                    color: const Color(0xFF7C3AED),
+                    onTap: () => _quickLogin('7654321098', 'demo1234'),
+                  ),
+                ],
               ],
             ),
           ),
