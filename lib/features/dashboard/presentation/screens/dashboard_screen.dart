@@ -1034,6 +1034,7 @@ class _EditPropertyDialogState extends ConsumerState<_EditPropertyDialog> {
   late final TextEditingController _areaCtr;
   late String  _type;
   int?    _ownerId;
+  int?    _pendingOwnerId;
   bool    _isLoading = false;
   String? _error;
   List<Map<String, dynamic>> _users = [];
@@ -1046,7 +1047,13 @@ class _EditPropertyDialogState extends ConsumerState<_EditPropertyDialog> {
     _areaCtr   = TextEditingController(
         text: (widget.prop['area_sqft'] as num?)?.toString() ?? '');
     _type      = (widget.prop['type'] as String?)?.toUpperCase() ?? 'RESIDENTIAL';
-    _ownerId   = widget.prop['owner_id'] as int?;
+    // _ownerId starts null and is only set once _users has loaded and
+    // this owner is confirmed to exist in the list — otherwise the
+    // dropdown briefly has a value with no matching item and Flutter
+    // throws (there should be exactly one item with [DropdownButton]'s
+    // value...).
+    _ownerId   = null;
+    _pendingOwnerId = widget.prop['owner_id'] as int?;
     // Use addPostFrameCallback so ref is available after first build
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadUsers());
   }
@@ -1058,6 +1065,13 @@ class _EditPropertyDialogState extends ConsumerState<_EditPropertyDialog> {
       if (mounted) {
         setState(() {
           _users = List<Map<String, dynamic>>.from(res.data['items'] as List);
+          // Only apply the pre-fill if that owner is actually present
+          // in the loaded list — otherwise leave it as "No owner" to
+          // avoid a dropdown value with no matching item.
+          if (_pendingOwnerId != null &&
+              _users.any((u) => u['user_id'] == _pendingOwnerId)) {
+            _ownerId = _pendingOwnerId;
+          }
         });
       }
     } catch (e) {
