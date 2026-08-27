@@ -1019,6 +1019,234 @@ class _AddPropertyDialogState extends ConsumerState<_AddPropertyDialog> {
   }
 }
 
+class _EditPropertyDialog extends ConsumerStatefulWidget {
+  final Map<String, dynamic> prop;
+  final VoidCallback onSuccess;
+  const _EditPropertyDialog({required this.prop, required this.onSuccess});
+
+  @override
+  ConsumerState<_EditPropertyDialog> createState() => _EditPropertyDialogState();
+}
+
+class _EditPropertyDialogState extends ConsumerState<_EditPropertyDialog> {
+  late final TextEditingController _unitNoCtr;
+  late final TextEditingController _floorCtr;
+  late final TextEditingController _areaCtr;
+  late String  _type;
+  int?    _ownerId;
+  int?    _pendingOwnerId;
+  bool    _isLoading = false;
+  String? _error;
+  List<Map<String, dynamic>> _users = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _unitNoCtr = TextEditingController(text: widget.prop['unit_no'] as String? ?? '');
+    _floorCtr  = TextEditingController(text: (widget.prop['floor'] as int?)?.toString() ?? '');
+    _areaCtr   = TextEditingController(
+        text: (widget.prop['area_sqft'] as num?)?.toString() ?? '');
+    _type      = (widget.prop['type'] as String?)?.toUpperCase() ?? 'RESIDENTIAL';
+    // _ownerId starts null and is only set once _users has loaded and
+    // this owner is confirmed to exist in the list — otherwise the
+    // dropdown briefly has a value with no matching item and Flutter
+    // throws (there should be exactly one item with [DropdownButton]'s
+    // value...).
+    _ownerId   = null;
+    _pendingOwnerId = widget.prop['owner_id'] as int?;
+    // Use addPostFrameCallback so ref is available after first build
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadUsers());
+  }
+
+  Future<void> _loadUsers() async {
+    try {
+      final client = ref.read(dioClientProvider);
+      final res = await client.get(ApiEndpoints.users);
+      if (mounted) {
+        setState(() {
+          _users = List<Map<String, dynamic>>.from(res.data['items'] as List);
+          // Only apply the pre-fill if that owner is actually present
+          // in the loaded list — otherwise leave it as "No owner" to
+          // avoid a dropdown value with no matching item.
+          if (_pendingOwnerId != null &&
+              _users.any((u) => u['user_id'] == _pendingOwnerId)) {
+            _ownerId = _pendingOwnerId;
+          }
+        });
+      }
+    } catch (e) {
+      // ignore - owner field just shows empty
+    }
+  }
+
+  @override
+  void dispose() {
+    _unitNoCtr.dispose();
+    _floorCtr.dispose();
+    _areaCtr.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (_unitNoCtr.text.trim().isEmpty || _floorCtr.text.trim().isEmpty) {
+      setState(() => _error = 'Unit no and floor are required');
+      return;
+    }
+    final floor = int.tryParse(_floorCtr.text.trim());
+    if (floor == null) {
+      setState(() => _error = 'Floor must be a number');
+      return;
+    }
+    setState(() { _isLoading = true; _error = null; });
+    try {
+      final client = ref.read(dioClientProvider);
+      final propertyId = widget.prop['property_id'] as int;
+      await client.patch('${ApiEndpoints.properties}/$propertyId', data: {
+        'unit_no':   _unitNoCtr.text.trim().toUpperCase(),
+        'floor':     floor,
+        'type':      _type,
+        'area_sqft': _areaCtr.text.trim().isEmpty
+            ? null : double.tryParse(_areaCtr.text.trim()),
+        'owner_id':  _ownerId,
+      });
+      if (mounted) {
+        ref.invalidate(propertiesListProvider);
+        await Future.delayed(const Duration(milliseconds: 300));
+        Navigator.pop(context);
+        widget.onSuccess();
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Property updated successfully'),
+          backgroundColor: Color(0xFF16A34A),
+        ));
+      }
+    } on DioException catch (e) {
+      String msg = 'Something went wrong';
+      try {
+        final data = e.response?.data;
+        if (data is Map && data['detail'] is String) {
+          msg = data['detail'];
+        } else if (data is Map && data['detail'] is List) {
+          final errors = data['detail'] as List;
+          msg = errors.map((err) {
+            final field = (err['loc'] as List).last.toString();
+            final message = err['msg'].toString().replaceAll('Value error, ', '');
+            return '$field: $message';
+          }).join(', ');
+        }
+      } catch (_) {}
+      setState(() { _isLoading = false; _error = msg; });
+    } catch (e) {
+      setState(() { _isLoading = false; _error = e.toString(); });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Edit unit',
+          style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+      content: SizedBox(width: 400, child: SingleChildScrollView(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          if (_error != null)
+            Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEE2E2),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFDC2626).withOpacity(.3)),
+              ),
+              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Icon(Icons.error_outline, color: Color(0xFFDC2626), size: 18),
+                const SizedBox(width: 8),
+                Expanded(child: Text(_error!,
+                    style: const TextStyle(color: Color(0xFFDC2626), fontSize: 13))),
+              ]),
+            ),
+          TextField(
+            controller: _unitNoCtr,
+            textCapitalization: TextCapitalization.characters,
+            decoration: const InputDecoration(
+              labelText: 'Unit number (e.g. 4B)',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.apartment_outlined),
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _floorCtr,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(
+              labelText: 'Floor number',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.layers_outlined),
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _areaCtr,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: const InputDecoration(
+              labelText: 'Area in sq ft (optional)',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.square_foot_outlined),
+            ),
+          ),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<String>(
+            value: _type,
+            decoration: const InputDecoration(
+              labelText: 'Type',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.home_work_outlined),
+            ),
+            items: const [
+              DropdownMenuItem(value: 'RESIDENTIAL', child: Text('Residential')),
+              DropdownMenuItem(value: 'COMMERCIAL',  child: Text('Commercial')),
+            ],
+            onChanged: (v) => setState(() => _type = v!),
+          ),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<int?>(
+            value: _ownerId,
+            isExpanded: true,
+            decoration: const InputDecoration(
+              labelText: 'Owner (optional)',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.person_outline),
+            ),
+            items: [
+              const DropdownMenuItem<int?>(value: null, child: Text('No owner')),
+              ..._users.map((u) => DropdownMenuItem<int?>(
+                value: u['user_id'] as int,
+                child: Text(
+                  '${u["name"]} · ${u["mobile"]}',
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+              )),
+            ],
+            onChanged: (v) => setState(() => _ownerId = v),
+          ),
+        ]),
+      )),
+      actions: [
+        TextButton(
+          onPressed: _isLoading ? null : () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: _isLoading ? null : _submit,
+          child: _isLoading
+              ? const SizedBox(width: 16, height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+              : const Text('Save changes'),
+        ),
+      ],
+    );
+  }
+}
+
 class _PropertyCard extends ConsumerWidget {
   final Map<String, dynamic> prop;
   const _PropertyCard(this.prop);
@@ -1058,7 +1286,7 @@ class _PropertyCard extends ConsumerWidget {
         const SizedBox(width: 8),
         PopupMenuButton<String>(
           icon: const Icon(Icons.more_vert, size: 18, color: AppColors.textMuted),
-          onSelected: (action) => _handleAction(context, ref, action, propertyId, unitNo),
+          onSelected: (action) => _handleAction(context, ref, action, propertyId, unitNo, prop),
           itemBuilder: (_) => [
             const PopupMenuItem(
               value: 'edit',
@@ -1085,7 +1313,17 @@ class _PropertyCard extends ConsumerWidget {
   }
 
   Future<void> _handleAction(BuildContext context, WidgetRef ref,
-      String action, int propertyId, String unitNo) async {
+      String action, int propertyId, String unitNo, Map<String, dynamic> prop) async {
+    if (action == 'edit') {
+      showDialog(
+        context: context,
+        builder: (_) => _EditPropertyDialog(
+          prop: prop,
+          onSuccess: () => ref.invalidate(propertiesListProvider),
+        ),
+      );
+      return;
+    }
     if (action != 'delete') return;
     final confirm = await showDialog<bool>(
       context: context,
